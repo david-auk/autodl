@@ -130,3 +130,6 @@ dmypy.json
 
 # Api token keys
 *-token.txt
+
+# Sensitive files
+mariadb_credentials.py 
