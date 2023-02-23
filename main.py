@@ -1,36 +1,8 @@
 import os
 import urllib.parse
 import requests
-
-# Checking and writing Telegram API token
-if os.path.isfile("./telegram-token.txt") is False:
-	print("Telegram token not found..\n\nN/A for none.")
-	token = input("Telegram Token:\t\t")
-	if token == "N/A":
-		open("./telegram-token.txt", 'a').close()
-	else:
-		tgFile = open("./telegram-token.txt", "w")
-		tgFile.write(token)
-		tgFile.close
-
-# Checking and writing user(s) ChatID
-if os.path.isfile("./user-token.txt") is False:
-	print("User ChatID not found..\n\nN/A for none.")
-	hostChatId = input("Host ChatID:\t\t")
-	if hostChatId == "N/A":
-		open("./user-token.txt", 'a').close()
-	else:	
-		print("Seperate with ',' (enter for none)")
-		aditionalChatId = input("Aditional ChatID:\t")
-		if aditionalChatId:
-			aditionalChatId = aditionalChatId.replace(",", "\n")
-			chatIdTotaal = hostChatId + "\n" + aditionalChatId
-		else:
-			chatIdTotaal = hostChatId
-
-		chatIdFile = open("./user-token.txt", "w")
-		chatIdFile.write(chatIdTotaal)
-		chatIdFile.close
+import mariadb_credentials
+import mysql.connector as database
 
 # Function for messaging host using query
 def msgHost(query):
@@ -50,5 +22,12 @@ def msgAll(query):
 			requests.get("https://api.telegram.org/bot{}/sendMessage?chat_id={}&text={}".format(telegramToken,currentUserChatId,formatedQuote))
 
 # Function for searching DB
+connection = database.connect(
+    user=mariadb_credentials.user,
+    password=mariadb_credentials.password,
+    host=mariadb_credentials.host,
+    database=mariadb_credentials.database)
 
+
+print(mariadb_credentials.password)
 # Function for adding to DB
