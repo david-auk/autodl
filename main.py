@@ -31,20 +31,30 @@ mydb = database.connect(
 
 mycursor = mydb.cursor()
 
-# Function for adding to DB
-def addData(table, title, childfrom, urlid, videopath, thumbnailpath, deleted, deletedtype, uploaddate):
+# Function for adding instances to the account table
+def addAccountData(title, channelid, priority):
 	try:
-		statement = "INSERT INTO " + table + " VALUES (\"{}\", \"{}\", \"{}\", \"{}\", \"{}\", {}, \"{}\", \"{}\")".format(title,childfrom,urlid,videopath,thumbnailpath,deleted,deletedtype,uploaddate)
+		statement = "INSERT INTO account VALUES (\"{}\", \"{}\", \"{}\")".format(title,channelid,priority)
 		mycursor.execute(statement)
 		mydb.commit()
 		print(mycursor.rowcount, "record inserted.")
 	except database.Error as e:
 		print(f"Error retrieving entry from database: {e}")
 
-# Function for deleting rows using the urlid variable
-def delData(table, urlid):
+# Function for adding instances to the content table
+def addContentData(title, childfrom, urlid, videopath, thumbnailpath, deleted, deletedtype, uploaddate):
 	try:
-		statement = "DELETE FROM " + table + " WHERE urlid=\'{}\'".format(urlid)
+		statement = "INSERT INTO content VALUES (\"{}\", \"{}\", \"{}\", \"{}\", \"{}\", {}, \"{}\", \"{}\")".format(title,childfrom,urlid,videopath,thumbnailpath,deleted,deletedtype,uploaddate)
+		mycursor.execute(statement)
+		mydb.commit()
+		print(mycursor.rowcount, "record inserted.")
+	except database.Error as e:
+		print(f"Error retrieving entry from database: {e}")
+
+# Function for deleting rows in any table using the id variable
+def delData(table, instanceid):
+	try:
+		statement = "DELETE FROM " + table + " WHERE id=\'{}\'".format(instanceid)
 		mycursor.execute(statement)
 		mydb.commit()
 		if mycursor.rowcount == 0:
@@ -55,27 +65,22 @@ def delData(table, urlid):
 		print(f"Error deleting entry from database: {e}")
 
 # Function for searching DB
-def getEntry(last_name):
+def getData(table, instanceid):
 	try:
-		statement = "SELECT first_name, last_name FROM employees WHERE last_name=%s"
-		data = (last_name,)
-		cursor.execute(statement, data)
-		for (first_name, last_name) in cursor:
-			print(f"Successfully retrieved {first_name}, {last_name}")
+		if instanceid == "ALL":
+			statement = "SELECT * FROM " + table
+		else:
+			statement = "SELECT * FROM " + table + " WHERE id=\"{}\"".format(instanceid)
+		mycursor.execute(statement)
+		global returnSucces
+		returnSucces = False
+		for x in mycursor:
+			returnSucces = True
+			print(f"Successfully retrieved {x}")
 	except database.Error as e:
 		print(f"Error retrieving entry from database: {e}")
 
-table = "content"
-title = "Yo dit is een - lied (prod text)"
-account = "account"
-urlid = "aaaaa3232"
-videopath = "/mnt/backupstick/account/" + title + ".mp4"
-thumbnailpath = "/mnt/backupstick/account/thumbnail/" + title + ".mp4"
-deleted = 0
-deletedtype = "N/A"
-uploaddate = "21/02/2023"
-
-addData(table, title, account, urlid, videopath, thumbnailpath, deleted, deletedtype, uploaddate)
-#delData("content", urlid)
+# Example:
+# addContentData("title", "account", "urlid", "videopath", "thumbnailpath", "0", "deletedtype", "uploaddate")
 
 mydb.close()
