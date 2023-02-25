@@ -37,7 +37,7 @@ if accountExists is False:
 	print("Created account table")
 if contentExists is False:
 	mycursor.execute("CREATE TABLE content (title text, childfrom text, urlid CHAR(12), videopath text, thumbnailpath text, deleted int, deletedtype text, uploaddate text)")
-	print("Created account content")
+	print("Created content table")
 
 mycursor.close()
 
@@ -66,7 +66,6 @@ if os.path.isfile("./user-token.txt") is False:
 			chatIdTotaal = hostChatId + "\n" + aditionalChatId
 		else:
 			chatIdTotaal = hostChatId
-
 		chatIdFile = open("./user-token.txt", "w")
 		chatIdFile.write(chatIdTotaal)
 		chatIdFile.close
