@@ -33,10 +33,10 @@ for x in mycursor:
 	if "content" in x:
 		contentExists = True
 if accountExists is False:
-	mycursor.execute("CREATE TABLE account (title text, channelid CHAR(25), priority int)")
+	mycursor.execute("CREATE TABLE account (title text, id CHAR(25), priority int)")
 	print("Created account table")
 if contentExists is False:
-	mycursor.execute("CREATE TABLE content (title text, childfrom text, urlid CHAR(12), videopath text, thumbnailpath text, deleted int, deletedtype text, uploaddate text)")
+	mycursor.execute("CREATE TABLE content (title text, childfrom text, id CHAR(12), videopath text, thumbnailpath text, deleted int, deletedtype text, uploaddate text)")
 	print("Created content table")
 
 mycursor.close()
