@@ -1,36 +1,8 @@
 import os
-import urllib.parse
 import requests
-
-# Checking and writing Telegram API token
-if os.path.isfile("./telegram-token.txt") is False:
-	print("Telegram token not found..\n\nN/A for none.")
-	token = input("Telegram Token:\t\t")
-	if token == "N/A":
-		open("./telegram-token.txt", 'a').close()
-	else:
-		tgFile = open("./telegram-token.txt", "w")
-		tgFile.write(token)
-		tgFile.close
-
-# Checking and writing user(s) ChatID
-if os.path.isfile("./user-token.txt") is False:
-	print("User ChatID not found..\n\nN/A for none.")
-	hostChatId = input("Host ChatID:\t\t")
-	if hostChatId == "N/A":
-		open("./user-token.txt", 'a').close()
-	else:	
-		print("Seperate with ',' (enter for none)")
-		aditionalChatId = input("Aditional ChatID:\t")
-		if aditionalChatId:
-			aditionalChatId = aditionalChatId.replace(",", "\n")
-			chatIdTotaal = hostChatId + "\n" + aditionalChatId
-		else:
-			chatIdTotaal = hostChatId
-
-		chatIdFile = open("./user-token.txt", "w")
-		chatIdFile.write(chatIdTotaal)
-		chatIdFile.close
+import urllib.parse
+import mariadb_credentials
+import mysql.connector as database
 
 # Function for messaging host using query
 def msgHost(query):
@@ -49,6 +21,66 @@ def msgAll(query):
 			currentUserChatId = currentUserChatId.strip()
 			requests.get("https://api.telegram.org/bot{}/sendMessage?chat_id={}&text={}".format(telegramToken,currentUserChatId,formatedQuote))
 
-# Function for searching DB
+# Defining DB configuration
+mydb = database.connect(
+  host=mariadb_credentials.host,
+  user=mariadb_credentials.user,
+  password=mariadb_credentials.password,
+  database=mariadb_credentials.database
+)
 
-# Function for adding to DB
+mycursor = mydb.cursor()
+
+# Function for adding instances to the account table
+def addAccountData(title, channelid, priority):
+	try:
+		statement = "INSERT INTO account VALUES (\"{}\", \"{}\", \"{}\")".format(title,channelid,priority)
+		mycursor.execute(statement)
+		mydb.commit()
+		print(mycursor.rowcount, "record inserted.")
+	except database.Error as e:
+		print(f"Error retrieving entry from database: {e}")
+
+# Function for adding instances to the content table
+def addContentData(title, childfrom, urlid, videopath, thumbnailpath, deleted, deletedtype, uploaddate):
+	try:
+		statement = "INSERT INTO content VALUES (\"{}\", \"{}\", \"{}\", \"{}\", \"{}\", {}, \"{}\", \"{}\")".format(title,childfrom,urlid,videopath,thumbnailpath,deleted,deletedtype,uploaddate)
+		mycursor.execute(statement)
+		mydb.commit()
+		print(mycursor.rowcount, "record inserted.")
+	except database.Error as e:
+		print(f"Error retrieving entry from database: {e}")
+
+# Function for deleting rows in any table using the id variable
+def delData(table, instanceid):
+	try:
+		statement = "DELETE FROM " + table + " WHERE id=\'{}\'".format(instanceid)
+		mycursor.execute(statement)
+		mydb.commit()
+		if mycursor.rowcount == 0:
+			print("No rows where deleted.")
+		else:
+			print(mycursor.rowcount, "rows deleted.")
+	except database.Error as e:
+		print(f"Error deleting entry from database: {e}")
+
+# Function for searching DB
+def getData(table, instanceid):
+	try:
+		if instanceid == "ALL":
+			statement = "SELECT * FROM " + table
+		else:
+			statement = "SELECT * FROM " + table + " WHERE id=\"{}\"".format(instanceid)
+		mycursor.execute(statement)
+		global returnSucces
+		returnSucces = False
+		for x in mycursor:
+			returnSucces = True
+			print(f"Successfully retrieved {x}")
+	except database.Error as e:
+		print(f"Error retrieving entry from database: {e}")
+
+# Example:
+# addContentData("title", "account", "urlid", "videopath", "thumbnailpath", "0", "deletedtype", "uploaddate")
+
+mydb.close()
