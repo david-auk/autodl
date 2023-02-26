@@ -1,86 +1,45 @@
 import os
-import requests
-import urllib.parse
-import mariadb_credentials
-import mysql.connector as database
+import yt_dlp
+import scrapetube
+import datetime
+import functions
 
-# Function for messaging host using query
-def msgHost(query):
-	telegramToken = open("telegram-token.txt").read()
-	formatedQuote = urllib.parse.quote(query)
-	hostChatId = open("user-token.txt").readline().strip('\n')
-	requests.get("https://api.telegram.org/bot{}/sendMessage?chat_id={}&text={}".format(telegramToken,hostChatId,formatedQuote))
 
-# Function for messaging all using query
-def msgAll(query):
-	telegramToken = open("telegram-token.txt").read()
-	formatedQuote = urllib.parse.quote(query)
-	usersChatId = open("user-token.txt").read()
-	with open('user-token.txt') as usersChatId:
-		for currentUserChatId in usersChatId:
-			currentUserChatId = currentUserChatId.strip()
-			requests.get("https://api.telegram.org/bot{}/sendMessage?chat_id={}&text={}".format(telegramToken,currentUserChatId,formatedQuote))
+#functions.msgHost("yoyoyo")
 
-# Defining DB configuration
-mydb = database.connect(
-  host=mariadb_credentials.host,
-  user=mariadb_credentials.user,
-  password=mariadb_credentials.password,
-  database=mariadb_credentials.database
-)
+#quit()
 
-mycursor = mydb.cursor()
 
-# Function for adding instances to the account table
-def addAccountData(title, channelid, priority):
-	try:
-		statement = "INSERT INTO account VALUES (\"{}\", \"{}\", \"{}\")".format(title,channelid,priority)
-		mycursor.execute(statement)
-		mydb.commit()
-		print(mycursor.rowcount, "record inserted.")
-	except database.Error as e:
-		print(f"Error retrieving entry from database: {e}")
+functions.getData("account","id","ALL", "accountList")
+myCursorChannelRequest = functions.getDataCursor
+for (channelTitle, id, priority) in myCursorChannelRequest:
 
-# Function for adding instances to the content table
-def addContentData(title, childfrom, urlid, videopath, thumbnailpath, deleted, deletedtype, uploaddate):
-	try:
-		statement = "INSERT INTO content VALUES (\"{}\", \"{}\", \"{}\", \"{}\", \"{}\", {}, \"{}\", \"{}\")".format(title,childfrom,urlid,videopath,thumbnailpath,deleted,deletedtype,uploaddate)
-		mycursor.execute(statement)
-		mydb.commit()
-		print(mycursor.rowcount, "record inserted.")
-	except database.Error as e:
-		print(f"Error retrieving entry from database: {e}")
+	priorityColor = functions.colourPriority(priority)
+	print(f"{priorityColor}•{functions.colours['reset']} {channelTitle}:")
 
-# Function for deleting rows in any table using the id variable
-def delData(table, instanceid):
-	try:
-		statement = "DELETE FROM " + table + " WHERE id=\'{}\'".format(instanceid)
-		mycursor.execute(statement)
-		mydb.commit()
-		if mycursor.rowcount == 0:
-			print("No rows where deleted.")
+	videos = scrapetube.get_channel(id)	
+
+	for video in videos:
+		urlid = video['videoId']
+		videoTitle = video['title']['runs'][0]['text']
+		print(videoTitle + "\n")
+		functions.getData("content", "id", urlid, "contentCheck")
+		if functions.entryExists:
+			print(f"[{functions.coloursB['green']}√{functions.colours['reset']}] https://www.youtube.com/watch?v={urlid}\n")
+
+			break #to next account
 		else:
-			print(mycursor.rowcount, "rows deleted.")
-	except database.Error as e:
-		print(f"Error deleting entry from database: {e}")
+			print(f"[{functions.coloursB['red']}X{functions.colours['reset']}] https://www.youtube.com/watch?v={urlid}")
+			currentDate = datetime.datetime.now()
+			formattedDate = currentDate.strftime("%d-%m-%Y")
 
-# Function for searching DB
-def getData(table, instanceid):
-	try:
-		if instanceid == "ALL":
-			statement = "SELECT * FROM " + table
-		else:
-			statement = "SELECT * FROM " + table + " WHERE id=\"{}\"".format(instanceid)
-		mycursor.execute(statement)
-		global returnSucces
-		returnSucces = False
-		for x in mycursor:
-			returnSucces = True
-			print(f"Successfully retrieved {x}")
-	except database.Error as e:
-		print(f"Error retrieving entry from database: {e}")
+			# functions.addContentData(videoTitle,channelTitle,urlid,"path","thumbnailPath",0,"N/A",formattedDate)
 
-# Example:
-# addContentData("title", "account", "urlid", "videopath", "thumbnailpath", "0", "deletedtype", "uploaddate")
+			# Download file here
 
-mydb.close()
+			# functions.chData("content", urlid, "downloaddate", "12-02-1992")
+
+			print("\n")
+
+print("end of myCursor loop")
+functions.closeCursor()
