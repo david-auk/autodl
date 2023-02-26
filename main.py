@@ -4,12 +4,6 @@ import scrapetube
 import datetime
 import functions
 
-
-#functions.msgHost("yoyoyo")
-
-#quit()
-
-
 functions.getData("account","id","ALL", "accountList")
 myCursorChannelRequest = functions.getDataCursor
 for (channelTitle, id, priority) in myCursorChannelRequest:
