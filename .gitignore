@@ -128,8 +128,5 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-# Api token keys
-*-token.txt
-
 # Sensitive files
-mariadb_credentials.py 
+secret.py
