@@ -1,71 +1,88 @@
 import os
 import mysql.connector as database
+import json
+import getpass
 
-# Checking for DB configuration
-if os.path.isfile("./mariadb_credentials.py"):
-	import mariadb_credentials
-else:
-	print(" # Database configuration # ")
-	host = input("host (probably localhost): ")
-	database = input ("database: ")
-	user = input("user: ")
-	password = input("password: ")
-	config = "user=\"{}\"\npassword=\"{}\"\nhost=\"{}\"\ndatabase=\"{}\"".format(user,password,host,database)
-	dbFile = open("./mariadb_credentials.py", "w")
-	dbFile.write(config)
-	dbFile.close
-	quit()
+# Defining the dictionary structure
+mariadb = {
+	'credentials': {
+		'user': "",
+		'password': "",
+	},
+	'connection': {
+		'host': "",
+		'database': ""
+	}
+}
+
+telegram = {
+	'credentials': {
+		'token': ''
+	},
+	'chatid': {
+		'hostChatId': '',
+		'adminChatId': [],
+		'userChatId': []
+	}
+}
+
+for key in mariadb:
+	for sub_key in mariadb[key]:
+		if sub_key == 'password':
+			mariadb[key][sub_key] = getpass.getpass(prompt=f"DB {sub_key}: ")
+		else:
+			mariadb[key][sub_key] = input(f"DB {sub_key}: ")
+
+for key in telegram:
+	if key == 'credentials':
+		for sub_key in telegram[key]:
+			telegram[key][sub_key] = getpass.getpass(prompt=f"Telegram {sub_key}: ")
+	else:
+		for sub_key in telegram[key]:
+			if sub_key == 'hostChatId':
+				telegram[key][sub_key] = input(f"Telegram {sub_key}: ")	
+			else:
+				value = input(f"Telegram (seperate w/ ',') {sub_key}: ")
+				if ',' in value:
+					telegram[key][sub_key] = value.split(',')
+				else:
+					telegram[key][sub_key] = value
+
+# Write the resulting dictionary to a secret.py file
+with open('secret.py', 'w') as file:
+	file.write("mariadb = " + json.dumps(mariadb, indent=4).replace('"', "'").replace("    ","\t") + "\n")
+	file.write("telegram = " + json.dumps(telegram, indent=4).replace('"', "'").replace("    ","\t"))
+
+import secret
 
 mydb = database.connect(
-  host=mariadb_credentials.host,
-  user=mariadb_credentials.user,
-  password=mariadb_credentials.password,
-  database=mariadb_credentials.database
+	host=secret.mariadb['connection']['host'],
+	user=secret.mariadb['credentials']['user'],
+	password=secret.mariadb['credentials']['password'],
+	database=secret.mariadb['connection']['database']
 )
 
-mycursor = mydb.cursor()
-mycursor.execute("SHOW TABLES")
+myCursor = mydb.cursor()
+myCursor.execute("SHOW TABLES")
 accountExists = False
 contentExists = False
-for x in mycursor:
+for x in myCursor:
 	if "account" in x:
 		accountExists = True
 	if "content" in x:
 		contentExists = True
 if accountExists is False:
-	mycursor.execute("CREATE TABLE account (title text, id CHAR(25), priority int)")
-	print("Created account table")
+	try:
+		myCursor.execute("CREATE TABLE account (title text, id CHAR(25), priority int)")
+		print(myCursor.rowcount, "TABLES added.")
+	except database.Error as e:
+		print(f"Error creating table in {mydb.database}: {e}")
+
 if contentExists is False:
-	mycursor.execute("CREATE TABLE content (title text, childfrom text, id CHAR(12), videopath text, thumbnailpath text, deleted int, deletedtype text, uploaddate text)")
-	print("Created content table")
+	try:
+		myCursor.execute("CREATE TABLE content (title text, childfrom text, id CHAR(12), videopath text, thumbnailpath text, deleted int, deletedtype text, downloaddate text)")
+		print(myCursor.rowcount, "TABLES added.")
+	except database.Error as e:
+		print(f"Error creating table in {mydb.database}: {e}")
 
-mycursor.close()
-
-# Checking and writing Telegram API token
-if os.path.isfile("./telegram-token.txt") is False:
-	print("Telegram token not found..\n\nN/A for none.")
-	token = input("Telegram Token:\t\t")
-	if token == "N/A":
-		open("./telegram-token.txt", 'a').close()
-	else:
-		tgFile = open("./telegram-token.txt", "w")
-		tgFile.write(token)
-		tgFile.close
-
-# Checking and writing user(s) ChatID
-if os.path.isfile("./user-token.txt") is False:
-	print("User ChatID not found..\n\nN/A for none.")
-	hostChatId = input("Host ChatID:\t\t")
-	if hostChatId == "N/A":
-		open("./user-token.txt", 'a').close()
-	else:	
-		print("Seperate with ',' (enter for none)")
-		aditionalChatId = input("Aditional ChatID:\t")
-		if aditionalChatId:
-			aditionalChatId = aditionalChatId.replace(",", "\n")
-			chatIdTotaal = hostChatId + "\n" + aditionalChatId
-		else:
-			chatIdTotaal = hostChatId
-		chatIdFile = open("./user-token.txt", "w")
-		chatIdFile.write(chatIdTotaal)
-		chatIdFile.close
+myCursor.close()
