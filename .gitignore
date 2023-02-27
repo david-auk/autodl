@@ -130,3 +130,6 @@ dmypy.json
 
 # Sensitive files
 secret.py
+
+# Test files
+*test*
