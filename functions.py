@@ -4,6 +4,7 @@ import requests
 import secret
 import datetime
 import os
+import re
 
 # Define coulors
 colours = {
@@ -84,22 +85,24 @@ addAccountDataCursor = mydb.cursor(buffered=True)
 # Function for adding instances to the account table
 def addAccountData(title, channelid, priority):
 	try:
+		table = 'account'
 		statement = "INSERT INTO account VALUES (\"{}\", \"{}\", \"{}\")".format(title,channelid,priority)
 		addAccountDataCursor.execute(statement)
 		mydb.commit()
 		print(addAccountDataCursor.rowcount, "record inserted.")
 	except database.Error as e:
-		print(f"Error retrieving entry from database: {e}")
+		print(f"Error adding entry from {mydb.database}[{table}]: {e}")
 
 # Function for adding instances to the content table
-def addContentData(title, childfrom, urlid, videopath, thumbnailpath, deleted, deletedtype, uploaddate):
+def addContentData(title, childfrom, urlid, videopath, thumbnailpath, deleted, deletedtype, requestuser, uploaddate):
 	try:
-		statement = "INSERT INTO content VALUES (\"{}\", \"{}\", \"{}\", \"{}\", \"{}\", {}, \"{}\", \"{}\")".format(mydb.converter.escape(title),mydb.converter.escape(childfrom),urlid,mydb.converter.escape(videopath),mydb.converter.escape(thumbnailpath),deleted,deletedtype,uploaddate)
+		table = 'content'
+		statement = "INSERT INTO content VALUES (\"{}\", \"{}\", \"{}\", \"{}\", \"{}\", {}, \"{}\", \"{}\", \"{}\")".format(mydb.converter.escape(title),mydb.converter.escape(childfrom),urlid,mydb.converter.escape(videopath),mydb.converter.escape(thumbnailpath),deleted,deletedtype,requestuser,uploaddate)
 		addContentDataCursor.execute(statement)
 		mydb.commit()
 		print(addContentDataCursor.rowcount, "record inserted.")
 	except database.Error as e:
-		print(f"Error retrieving entry from database: {e}")
+		print(f"Error adding entry from {mydb.database}[{table}]: {e}")
 
 # Function for deleting rows in any table using the id variable
 def delData(table, instanceid):
@@ -112,27 +115,35 @@ def delData(table, instanceid):
 		else:
 			print(delDataCursor.rowcount, "rows deleted.")
 	except database.Error as e:
-		print(f"Error deleting entry from database: {e}")
+		print(f"Error deleting entry from {mydb.database}[{table}]: {e}")
 
 # Function for searching DB
-def getData(table, column, instanceid, requestType):
+def getData(table, column, instanceid):
 	try:
 		if instanceid == "ALL":
 			statement = "SELECT * FROM " + table
 		else:
 			statement = "SELECT * FROM " + table + " WHERE {}=\"{}\"".format(column,instanceid)
-		if requestType == "contentCheck":
-			getDataInnerCursor.execute(statement)
-			global entryExists
-			entryExists = False
-			for x in getDataInnerCursor:
-				entryExists = True
-			#getDataInnerCursor.clear_attributes()
-		else:
-			getDataCursor.execute(statement)
-			return getDataCursor
+		getDataCursor.execute(statement)
+		return getDataCursor
+
 	except database.Error as e:
-		print(f"Error retrieving entry from {mydb.database}: {e}")
+		print(f"Error retrieving entry from {mydb.database}[{table}]: {e}")
+
+def getDataContentCheck(instanceid):
+	try:
+		table = 'content'
+		column = 'id'
+		statement = "SELECT * FROM " + table + " WHERE {}=\"{}\"".format(column,instanceid)
+		getDataInnerCursor.execute(statement)
+		entryExists = False
+		for x in getDataInnerCursor:
+			entryExists = True
+
+		return entryExists
+
+	except database.Error as e:
+		print(f"Error retrieving entry from {mydb.database}[{table}]: {e}")
 
 def chData(table, id, column, newData):
 	try:
@@ -144,7 +155,23 @@ def chData(table, id, column, newData):
 		else:
 			print(chDataCursor.rowcount, "rows updated.")
 	except database.Error as e:
-		print(f"Error retrieving entry from {mydb.database}: {e}")
+		print(f"Error manipulating data from {mydb.database}[{table}]: {e}")
+
+
+
+def filenameFriendly(srtValue):
+	# lowercase all characters
+	srtValue = srtValue.lower()
+	# replace non-alphanumeric characters with underscores
+	srtValue = re.sub(r'[^\w\s-]', '_', srtValue).strip()
+	# truncate the resulting filename to a maximum length of 255 bytes
+	filename = srtValue[:255]
+	# remove any trailing underscores
+	filename = filename.rstrip('_')
+	return filename
+
+
+
 
 def closeCursor():
 	chDataCursor.close()
