@@ -26,6 +26,66 @@ telegram = {
 	}
 }
 
+# Defining diffirent tables and types
+myTables = {
+	'account': {
+		'title': {
+			'type': 'text'
+		},
+		'id': {
+			'type': 'char(25)'
+		},
+		'priority': {
+			'type': 'int(11)'
+		}
+	},
+	'content': {
+		'title': {
+			'type': 'text'
+		},
+		'childfrom': {
+			'type': 'text'
+		},
+		'id': {
+			'type': 'char(12)'
+		},
+		'videopath': {
+			'type': 'text'
+		},
+		'deleted': {
+			'type': 'int(11)'
+		},
+		'requestuser': {
+			'type': 'varchar(11)'
+		},
+		'downloaddate': {
+			'type': 'text'
+		}
+	},
+	'chatid': {
+		'name': {
+			'type': 'text'
+		},
+		'id': {
+			'type': 'char(25)'
+		},
+		'priority': {
+			'type': 'int(11)'
+		}
+	},
+	'deletedcontent': {
+		'id': {
+			'type': 'char(12)'
+		},
+		'deleteddate': {
+			'type': 'text'
+		},
+		'deletedtype': {
+			'type': 'int(11)'
+		}
+	}
+}
+
 for key in mariadb:
 	for sub_key in mariadb[key]:
 		if sub_key == 'password':
@@ -55,6 +115,7 @@ with open('secret.py', 'w') as file:
 
 import secret
 
+# Defining connection variable
 mydb = database.connect(
 	host=secret.mariadb['connection']['host'],
 	user=secret.mariadb['credentials']['user'],
@@ -63,26 +124,26 @@ mydb = database.connect(
 )
 
 myCursor = mydb.cursor()
-myCursor.execute("SHOW TABLES")
-accountExists = False
-contentExists = False
-for x in myCursor:
-	if "account" in x:
-		accountExists = True
-	if "content" in x:
-		contentExists = True
-if accountExists is False:
-	try:
-		myCursor.execute("CREATE TABLE account (title text, id CHAR(25), priority int)")
-		print(myCursor.rowcount, "TABLES added.")
-	except database.Error as e:
-		print(f"Error creating table in {mydb.database}: {e}")
 
-if contentExists is False:
-	try:
-		myCursor.execute("CREATE TABLE content (title text, childfrom text, id CHAR(12), videopath text, thumbnailpath text, deleted int, deletedtype text, downloaddate text)")
-		print(myCursor.rowcount, "TABLES added.")
-	except database.Error as e:
-		print(f"Error creating table in {mydb.database}: {e}")
+# Creating list of added tables
+myCursor.execute("SHOW TABLES")
+existingTables = []
+for x in myCursor:
+	existingTables.append(x[0])
+
+# Creating (non installed) tables from myTables dictionary
+for table in myTables:
+	if table not in existingTables:
+		fieldOutput = ''
+		statement = ''
+		for field_name, field_info in myTables[table].items():
+		    fieldOutput += f"{field_name} {field_info['type']}, "
+
+		fieldOutput = fieldOutput[:-2]  # Remove the extra ", " at the end
+
+		statement = 'CREATE TABLE ' + table + ' (' + fieldOutput + ')' # Creating the SQL statement
+
+		myCursor.execute(statement)
+		print("1 TABLES added.")
 
 myCursor.close()
