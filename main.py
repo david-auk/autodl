@@ -1,86 +1,70 @@
 import os
-import requests
-import urllib.parse
-import mariadb_credentials
-import mysql.connector as database
+import yt_dlp
+import scrapetube
+import datetime
+import functions
 
-# Function for messaging host using query
-def msgHost(query):
-	telegramToken = open("telegram-token.txt").read()
-	formatedQuote = urllib.parse.quote(query)
-	hostChatId = open("user-token.txt").readline().strip('\n')
-	requests.get("https://api.telegram.org/bot{}/sendMessage?chat_id={}&text={}".format(telegramToken,hostChatId,formatedQuote))
+## Basic definition start.
 
-# Function for messaging all using query
-def msgAll(query):
-	telegramToken = open("telegram-token.txt").read()
-	formatedQuote = urllib.parse.quote(query)
-	usersChatId = open("user-token.txt").read()
-	with open('user-token.txt') as usersChatId:
-		for currentUserChatId in usersChatId:
-			currentUserChatId = currentUserChatId.strip()
-			requests.get("https://api.telegram.org/bot{}/sendMessage?chat_id={}&text={}".format(telegramToken,currentUserChatId,formatedQuote))
+requestuser = "scanner" # This will be the default value of the 'reqester' field in SQL
+totalRecordsAdded = 0 # So we can count upwards	
+totalRecordsSkipped = 0 # So we can count upwards	
 
-# Defining DB configuration
-mydb = database.connect(
-  host=mariadb_credentials.host,
-  user=mariadb_credentials.user,
-  password=mariadb_credentials.password,
-  database=mariadb_credentials.database
-)
+## Basic definition end.
 
-mycursor = mydb.cursor()
+myCursorChannelRequest = functions.getData("account", "id", 'ALL')
+for (channelTitle, id, priority) in myCursorChannelRequest:
 
-# Function for adding instances to the account table
-def addAccountData(title, channelid, priority):
-	try:
-		statement = "INSERT INTO account VALUES (\"{}\", \"{}\", \"{}\")".format(title,channelid,priority)
-		mycursor.execute(statement)
-		mydb.commit()
-		print(mycursor.rowcount, "record inserted.")
-	except database.Error as e:
-		print(f"Error retrieving entry from database: {e}")
+	# Creating the prompt with corosponding colour
+	priorityColor = functions.colourPriority(priority)
+	print(f"{priorityColor}•{functions.colours['reset']} {functions.coloursB['white']}{channelTitle}:{functions.colours['reset']}")
 
-# Function for adding instances to the content table
-def addContentData(title, childfrom, urlid, videopath, thumbnailpath, deleted, deletedtype, uploaddate):
-	try:
-		statement = "INSERT INTO content VALUES (\"{}\", \"{}\", \"{}\", \"{}\", \"{}\", {}, \"{}\", \"{}\")".format(title,childfrom,urlid,videopath,thumbnailpath,deleted,deletedtype,uploaddate)
-		mycursor.execute(statement)
-		mydb.commit()
-		print(mycursor.rowcount, "record inserted.")
-	except database.Error as e:
-		print(f"Error retrieving entry from database: {e}")
+	# Getting all the videos of current youtube channel in 'account' table
+	videos = scrapetube.get_channel(id)	
 
-# Function for deleting rows in any table using the id variable
-def delData(table, instanceid):
-	try:
-		statement = "DELETE FROM " + table + " WHERE id=\'{}\'".format(instanceid)
-		mycursor.execute(statement)
-		mydb.commit()
-		if mycursor.rowcount == 0:
-			print("No rows where deleted.")
+	for video in videos:
+		vidId = video['videoId']
+		videoTitle = video['title']['runs'][0]['text']
+		print(videoTitle + "\n")
+		entryExists = functions.getDataContentCheck('content', vidId)
+		if entryExists:
+
+			# Printing 'Succes' status for if the entry exists
+			print(f"[{functions.coloursB['green']}√{functions.colours['reset']}] https://www.youtube.com/watch?v={vidId}\n")
+			break #to next account
+			
 		else:
-			print(mycursor.rowcount, "rows deleted.")
-	except database.Error as e:
-		print(f"Error deleting entry from database: {e}")
 
-# Function for searching DB
-def getData(table, instanceid):
-	try:
-		if instanceid == "ALL":
-			statement = "SELECT * FROM " + table
-		else:
-			statement = "SELECT * FROM " + table + " WHERE id=\"{}\"".format(instanceid)
-		mycursor.execute(statement)
-		global returnSucces
-		returnSucces = False
-		for x in mycursor:
-			returnSucces = True
-			print(f"Successfully retrieved {x}")
-	except database.Error as e:
-		print(f"Error retrieving entry from database: {e}")
+			# Checking if video is in premere
+			isInPremiere = False
+			if 'upcomingEventData' in video:
+				isInPremiere = True
 
-# Example:
-# addContentData("title", "account", "urlid", "videopath", "thumbnailpath", "0", "deletedtype", "uploaddate")
+			# Skipping if video is in premiere
+			if isInPremiere:
+				print(f"[{functions.coloursB['yellow']}?{functions.colours['reset']}] https://www.youtube.com/watch?v={vidId}\nVideo in premiere, skipping\n")
+				totalRecordsSkipped += 1
+				break
 
-mydb.close()
+			# Printing 'Failed' status for if the entry exists
+			print(f"[{functions.coloursB['red']}X{functions.colours['reset']}] https://www.youtube.com/watch?v={vidId}")
+			
+			# Getting date
+			currentDate = datetime.datetime.now()
+			formattedDate = currentDate.strftime("%d-%m-%Y")
+
+			# Making the path filename friendly
+			filename = functions.filenameFriendly(videoTitle)
+			functions.addContentData(videoTitle,channelTitle,vidId,filename,"N/A",0, requestuser,formattedDate)
+
+			totalRecords += functions.addContentDataCursor.rowcount
+			# Download file here
+
+			# functions.chData("content", vidId, "downloaddate", "12-02-1992")
+
+			print("\n")
+
+
+print(f"{functions.coloursB['white']}{totalRecordsAdded}{functions.colours['reset']} Records inserted.")
+if totalRecordsSkipped:
+	print(f"{functions.coloursB['yellow']}{totalRecordsSkipped}{functions.colours['reset']} Records Skipped.")
