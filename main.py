@@ -6,11 +6,11 @@ import functions
 
 ## Basic definition start.
 
-requestuser = "scanner" # This will be the value of the 'reqester' field in SQL
+requestuser = "scanner" # This will be the default value of the 'reqester' field in SQL
 totalRecordsAdded = 0 # So we can count upwards	
 totalRecordsSkipped = 0 # So we can count upwards	
 
-## Basic definition end.s
+## Basic definition end.
 
 myCursorChannelRequest = functions.getData("account", "id", 'ALL')
 for (channelTitle, id, priority) in myCursorChannelRequest:
@@ -36,10 +36,9 @@ for (channelTitle, id, priority) in myCursorChannelRequest:
 		else:
 
 			# Checking if video is in premere
+			isInPremiere = False
 			if 'upcomingEventData' in video:
 				isInPremiere = True
-			else:
-				isInPremiere = False
 
 			# Skipping if video is in premiere
 			if isInPremiere:
@@ -69,5 +68,3 @@ for (channelTitle, id, priority) in myCursorChannelRequest:
 print(f"{functions.coloursB['white']}{totalRecordsAdded}{functions.colours['reset']} Records inserted.")
 if totalRecordsSkipped:
 	print(f"{functions.coloursB['yellow']}{totalRecordsSkipped}{functions.colours['reset']} Records Skipped.")
-else:
-	print(f"{functions.coloursB['white']}{totalRecordsSkipped}{functions.colours['reset']} Records Skipped.")
