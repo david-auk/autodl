@@ -29,7 +29,6 @@ coloursB = {
 	'white': "\033[1;37m",
 }
 
-
 # Getting color related to priority
 def colourPriority(priority):
 	if priority == 1:
@@ -78,9 +77,11 @@ mydb = database.connect(
 chDataCursor = mydb.cursor(buffered=True)
 delDataCursor = mydb.cursor(buffered=True)
 getDataCursor = mydb.cursor(buffered=True)
-getDataInnerCursor = mydb.cursor(buffered=True)
+addChatIdDataCursor = mydb.cursor(buffered=True)
 addContentDataCursor = mydb.cursor(buffered=True)
 addAccountDataCursor = mydb.cursor(buffered=True)
+getDataContentCheckCursor = mydb.cursor(buffered=True)
+addDeletedContentDataCursor = mydb.cursor(buffered=True)
 
 # Function for adding instances to the account table
 def addAccountData(title, channelid, priority):
@@ -89,18 +90,40 @@ def addAccountData(title, channelid, priority):
 		statement = "INSERT INTO account VALUES (\"{}\", \"{}\", \"{}\")".format(title,channelid,priority)
 		addAccountDataCursor.execute(statement)
 		mydb.commit()
-		print(addAccountDataCursor.rowcount, "record inserted.")
+		#print(addAccountDataCursor.rowcount, "record inserted.")
 	except database.Error as e:
 		print(f"Error adding entry from {mydb.database}[{table}]: {e}")
 
 # Function for adding instances to the content table
-def addContentData(title, childfrom, urlid, videopath, thumbnailpath, deleted, deletedtype, requestuser, uploaddate):
+def addChatIdData(name, id, priority):
 	try:
 		table = 'content'
-		statement = "INSERT INTO content VALUES (\"{}\", \"{}\", \"{}\", \"{}\", \"{}\", {}, \"{}\", \"{}\", \"{}\")".format(mydb.converter.escape(title),mydb.converter.escape(childfrom),urlid,mydb.converter.escape(videopath),mydb.converter.escape(thumbnailpath),deleted,deletedtype,requestuser,uploaddate)
+		statement = "INSERT INTO content VALUES (\"{}\", \"{}\", \"{}\")".format(mydb.converter.escape(name),name,id,priority)
+		addChatIdDataCursor.execute(statement)
+		mydb.commit()
+		#print(addChatIdDataCursor.rowcount, "record inserted.")
+	except database.Error as e:
+		print(f"Error adding entry from {mydb.database}[{table}]: {e}")
+
+# Function for adding instances to the content table
+def addContentData(title, childfrom, vidid, videopath, extention, deleted, requestuser, uploaddate):
+	try:
+		table = 'content'
+		statement = "INSERT INTO content VALUES (\"{}\", \"{}\", \"{}\", \"{}\", \"{}\", {}, \"{}\", \"{}\")".format(mydb.converter.escape(title),mydb.converter.escape(childfrom),vidid,mydb.converter.escape(videopath),extention,deleted,requestuser,uploaddate)
 		addContentDataCursor.execute(statement)
 		mydb.commit()
-		print(addContentDataCursor.rowcount, "record inserted.")
+		#print(addContentDataCursor.rowcount, "record inserted.")
+	except database.Error as e:
+		print(f"Error adding entry from {mydb.database}[{table}]: {e}")
+
+# Function for adding instances to the content table
+def addDeletedContentData(title, childfrom, vidid, videopath, extention, deleted, requestuser, uploaddate):
+	try:
+		table = 'content'
+		statement = "INSERT INTO content VALUES (\"{}\", \"{}\", \"{}\", \"{}\", \"{}\", {}, \"{}\", \"{}\")".format(mydb.converter.escape(title),mydb.converter.escape(childfrom),vidid,mydb.converter.escape(videopath),extention,deleted,requestuser,uploaddate)
+		addDeletedContentDataCursor.execute(statement)
+		mydb.commit()
+		#print(addDeletedContentDataCursor.rowcount, "record inserted.")
 	except database.Error as e:
 		print(f"Error adding entry from {mydb.database}[{table}]: {e}")
 
@@ -126,18 +149,18 @@ def getData(table, column, instanceid):
 			statement = "SELECT * FROM " + table + " WHERE {}=\"{}\"".format(column,instanceid)
 		getDataCursor.execute(statement)
 		return getDataCursor
-
 	except database.Error as e:
 		print(f"Error retrieving entry from {mydb.database}[{table}]: {e}")
 
+# Function for checking if entry exists
 def getDataContentCheck(instanceid):
 	try:
 		table = 'content'
 		column = 'id'
 		statement = "SELECT * FROM " + table + " WHERE {}=\"{}\"".format(column,instanceid)
-		getDataInnerCursor.execute(statement)
+		getDataContentCheckCursor.execute(statement)
 		entryExists = False
-		for x in getDataInnerCursor:
+		for x in getDataContentCheckCursor:
 			entryExists = True
 
 		return entryExists
@@ -145,6 +168,7 @@ def getDataContentCheck(instanceid):
 	except database.Error as e:
 		print(f"Error retrieving entry from {mydb.database}[{table}]: {e}")
 
+# Function changing data of a table
 def chData(table, id, column, newData):
 	try:
 		statement = "UPDATE " + table + " SET {}=\"{}\" WHERE id=\"{}\"".format(column,newData,id)
@@ -157,26 +181,77 @@ def chData(table, id, column, newData):
 	except database.Error as e:
 		print(f"Error manipulating data from {mydb.database}[{table}]: {e}")
 
-
-
+# Convert non filename friendly srt to filename friendly
 def filenameFriendly(srtValue):
-	# lowercase all characters
+
+	# Lowercase all characters
 	srtValue = srtValue.lower()
-	# replace non-alphanumeric characters with underscores
-	srtValue = re.sub(r'[^\w\s-]', '_', srtValue).strip()
-	# truncate the resulting filename to a maximum length of 255 bytes
+
+	# Replace non-alphanumeric characters with underscores
+	srtValue = re.sub(r'[^a-zA-Z0-9\-]+', '_', srtValue)
+
+	# Remove any leading Underscores
+	srtValue = re.sub(r'^_+', '', srtValue)
+
+	# Remove any trailing Underscores
+	srtValue = srtValue.rstrip('_')
+
+	# Cut the resulting filename to a maximum length of 255 bytes
 	filename = srtValue[:255]
-	# remove any trailing underscores
-	filename = filename.rstrip('_')
+	
 	return filename
 
+def getVidId(link):
+	
+	# Check if the URL is in the format https://youtu.be/<video_id>
+	if 'youtu.be' in link:
 
+		# Extract the video ID from the URL
+		video_id = link.split('/')[-1].split('?')[0]
+	else:
 
+		# Extract the video ID from the query string of the URL
+		query_string = link.split('?')[1]
+		params = dict(item.split('=') for item in query_string.split('&'))
+		video_id = params['v']
+	
+	return video_id
 
+def avalibilityCheck(vidId):
+
+	# Create full link
+	url = f'https://www.youtube.com/watch?v={vidId}'
+
+	# Make a request to the video page
+	response = requests.get(url)
+
+	responseText = response.content.decode('utf-8')
+
+	#return False, responseText
+
+	isAvalible = True
+	avalibilityType = "public"
+	if '"playabilityStatus":{"status":"LOGIN_REQUIRED","messages"' in responseText:
+		isAvalible = False
+		avalibilityType = "private"
+	else:
+		if '"playabilityStatus":{"status":"ERROR","reason":"' in responseText or 'playabilityStatus":{"status":"ERROR"' in responseText:
+			isAvalible = False
+			avalibilityType = "deleted"
+		else:
+			if '><meta itemprop="unlisted" content="True">' in responseText:
+				isAvalible = False
+				avalibilityType = "unlisted"
+
+	return isAvalible, avalibilityType
+
+# Closing all the cursors at once
 def closeCursor():
 	chDataCursor.close()
 	delDataCursor.close()
 	getDataCursor.close()
-	getDataInnerCursor.close()
+	addChatIdDataCursor.close()
 	addContentDataCursor.close()
 	addAccountDataCursor.close()
+	getDataContentCheckCursor.close()
+	addDeletedContentDataCursor.close()
