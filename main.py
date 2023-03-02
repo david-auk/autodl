@@ -4,33 +4,38 @@ import scrapetube
 import datetime
 import functions
 
-#functions.delData("content", "tYO5OWlihgo")
-#quit()
+## Basic definition start.
 
-requestuser = "scanner"
+requestuser = "scanner" # This will be the value of the 'reqester' field in SQL
+totalRecords = 0 # So we can count upwards	
 
-functions.getData("account", "id", 'ALL')
-myCursorChannelRequest = functions.getDataCursor
+## Basic definition end.
+
+myCursorChannelRequest = functions.getData("account", "id", 'ALL')
 for (channelTitle, id, priority) in myCursorChannelRequest:
 
+	# Creating the prompt with corosponding colour
 	priorityColor = functions.colourPriority(priority)
 	print(f"{priorityColor}•{functions.colours['reset']} {functions.coloursB['white']}{channelTitle}:{functions.colours['reset']}")
 
+	# Getting all the videos of current youtube channel in 'account' table
 	videos = scrapetube.get_channel(id)	
 
 	for video in videos:
-		urlid = video['videoId']
+		vidId = video['videoId']
 		videoTitle = video['title']['runs'][0]['text']
 		print(videoTitle + "\n")
-		#functions.getData("content", "id", urlid, "contentCheck")
-		entryExists = functions.getDataContentCheck(urlid)
+		entryExists = functions.getDataContentCheck(vidId)
 		if entryExists:
+
 			# Printing 'Succes' status for if the entry exists
-			print(f"[{functions.coloursB['green']}√{functions.colours['reset']}] https://www.youtube.com/watch?v={urlid}\n")
+			print(f"[{functions.coloursB['green']}√{functions.colours['reset']}] https://www.youtube.com/watch?v={vidId}\n")
 			break #to next account
+			
 		else:
+
 			# Printing 'Failed' status for if the entry exists
-			print(f"[{functions.coloursB['red']}X{functions.colours['reset']}] https://www.youtube.com/watch?v={urlid}")
+			print(f"[{functions.coloursB['red']}X{functions.colours['reset']}] https://www.youtube.com/watch?v={vidId}")
 			
 			# Getting date
 			currentDate = datetime.datetime.now()
@@ -38,15 +43,17 @@ for (channelTitle, id, priority) in myCursorChannelRequest:
 
 			# Making the path filename friendly
 			filename = functions.filenameFriendly(videoTitle)
-			print(filename)
-			quit()
-			functions.addContentData(videoTitle,channelTitle,urlid,filename,"thumbnailPath",0,"N/A", requestuser,formattedDate)
+			functions.addContentData(videoTitle,channelTitle,vidId,filename,"N/A",0, requestuser,formattedDate)
 
+			totalRecords += functions.addContentDataCursor.rowcount
 			# Download file here
 
-			# functions.chData("content", urlid, "downloaddate", "12-02-1992")
+			# functions.chData("content", vidId, "downloaddate", "12-02-1992")
 
 			print("\n")
 
-print("end of myCursor loop")
+if totalRecords:
+	print(f"{functions.coloursB['white']}{totalRecords}{functions.colours['reset']} Records inserted.")
+else:
+	print("All up to date\n")
 functions.closeCursor()
