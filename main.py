@@ -9,7 +9,7 @@ import functions
 requestuser = "scanner" # This will be the value of the 'reqester' field in SQL
 totalRecords = 0 # So we can count upwards	
 
-## Basic definition end.
+## Basic definition end.s
 
 myCursorChannelRequest = functions.getData("account", "id", 'ALL')
 for (channelTitle, id, priority) in myCursorChannelRequest:
@@ -34,6 +34,17 @@ for (channelTitle, id, priority) in myCursorChannelRequest:
 			
 		else:
 
+			# Checking if video is in premere
+			if 'upcomingEventData' in video:
+				isInPremiere = True
+			else:
+				isInPremiere = False
+
+			# Skipping if video is in premiere
+			if isInPremiere:
+				print(f"[{functions.coloursB['yellow']}?{functions.colours['reset']}] https://www.youtube.com/watch?v={vidId}\nVideo in premiere, skipping\n")
+				break
+
 			# Printing 'Failed' status for if the entry exists
 			print(f"[{functions.coloursB['red']}X{functions.colours['reset']}] https://www.youtube.com/watch?v={vidId}")
 			
@@ -55,5 +66,5 @@ for (channelTitle, id, priority) in myCursorChannelRequest:
 if totalRecords:
 	print(f"{functions.coloursB['white']}{totalRecords}{functions.colours['reset']} Records inserted.")
 else:
-	print("All up to date\n")
+	print("Already downloaded latest videos\n")
 functions.closeCursor()
