@@ -7,7 +7,8 @@ import functions
 ## Basic definition start.
 
 requestuser = "scanner" # This will be the value of the 'reqester' field in SQL
-totalRecords = 0 # So we can count upwards	
+totalRecordsAdded = 0 # So we can count upwards	
+totalRecordsSkipped = 0 # So we can count upwards	
 
 ## Basic definition end.s
 
@@ -25,7 +26,7 @@ for (channelTitle, id, priority) in myCursorChannelRequest:
 		vidId = video['videoId']
 		videoTitle = video['title']['runs'][0]['text']
 		print(videoTitle + "\n")
-		entryExists = functions.getDataContentCheck(vidId)
+		entryExists = functions.getDataContentCheck('content', vidId)
 		if entryExists:
 
 			# Printing 'Succes' status for if the entry exists
@@ -43,6 +44,7 @@ for (channelTitle, id, priority) in myCursorChannelRequest:
 			# Skipping if video is in premiere
 			if isInPremiere:
 				print(f"[{functions.coloursB['yellow']}?{functions.colours['reset']}] https://www.youtube.com/watch?v={vidId}\nVideo in premiere, skipping\n")
+				totalRecordsSkipped += 1
 				break
 
 			# Printing 'Failed' status for if the entry exists
@@ -63,8 +65,9 @@ for (channelTitle, id, priority) in myCursorChannelRequest:
 
 			print("\n")
 
-if totalRecords:
-	print(f"{functions.coloursB['white']}{totalRecords}{functions.colours['reset']} Records inserted.")
+
+print(f"{functions.coloursB['white']}{totalRecordsAdded}{functions.colours['reset']} Records inserted.")
+if totalRecordsSkipped:
+	print(f"{functions.coloursB['yellow']}{totalRecordsSkipped}{functions.colours['reset']} Records Skipped.")
 else:
-	print("Already downloaded latest videos\n")
-functions.closeCursor()
+	print(f"{functions.coloursB['white']}{totalRecordsSkipped}{functions.colours['reset']} Records Skipped.")

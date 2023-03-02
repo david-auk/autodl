@@ -5,7 +5,9 @@ Translated script of [THIS](https://github.com/david-auk/autodl) github project
 
 ```bash
 pip3 install -r requirements.txt
+```
 
+```bash
 python3 install.py
 ```
 

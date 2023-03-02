@@ -153,9 +153,8 @@ def getData(table, column, instanceid):
 		print(f"Error retrieving entry from {mydb.database}[{table}]: {e}")
 
 # Function for checking if entry exists
-def getDataContentCheck(instanceid):
+def getDataContentCheck(table, instanceid):
 	try:
-		table = 'content'
 		column = 'id'
 		statement = "SELECT * FROM " + table + " WHERE {}=\"{}\"".format(column,instanceid)
 		getDataContentCheckCursor.execute(statement)

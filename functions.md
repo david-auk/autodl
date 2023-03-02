@@ -21,7 +21,7 @@ functions.getData("table_name", "target_colomn_name", "target_colomn_value")
 
 #### example:
 ```python
-functions.getData("account", "id", 'UCYdb_cMCuZGQlbajT50gpyw')
+functions.getData("account", "id", 'UC-lHJZR3Gqxm24_Vd_AJ5Yw')
 myCursorChannelRequest = functions.getDataCursor
 for (channelTitle, id, priority) in myCursorChannelRequest:
 	print(channelTitle)
@@ -33,13 +33,13 @@ for (channelTitle, id, priority) in myCursorChannelRequest:
 
 #### code:
 ```python
-functions.entryExists("id_value")
+functions.entryExists("table_name", "id_value")
 ```
 > return: The cursor data
 
 #### example:
 ```python
-entryExists = functions.getDataContentCheck(urlid)
+entryExists = functions.getDataContentCheck("content", urlid)
 if enteryExist:
 	print("the entery exists!")
 ```
