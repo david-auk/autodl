@@ -2,6 +2,7 @@ import os
 import mysql.connector as database
 import json
 import getpass
+import functions
 
 # Defining the dictionary structure
 mariadb = {
@@ -21,9 +22,15 @@ telegram = {
 	},
 	'chatid': {
 		'hostChatId': '',
-		'adminChatId': [],
-		'userChatId': []
+		'adminChatId': [''],
+		'userChatId': ['']
 	}
+}
+
+configuration = {
+	'general': {
+		'backupDir': ''
+	}, 
 }
 
 # Defining diffirent tables and types
@@ -52,6 +59,9 @@ myTables = {
 		'videopath': {
 			'type': 'text'
 		},
+		'extention': {
+			'type': 'text'
+		},
 		'deleted': {
 			'type': 'int(11)'
 		},
@@ -72,6 +82,9 @@ myTables = {
 		'priority': {
 			'type': 'int(11)'
 		}
+		'authenticated': {
+			'type': 'char(3)'
+		},
 	},
 	'deletedcontent': {
 		'id': {
@@ -108,10 +121,18 @@ for key in telegram:
 				else:
 					telegram[key][sub_key] = value
 
+for key in configuration:
+	for sub_key in configuration[key]:
+		if sub_key == 'password':
+			mariadb[key][sub_key] = getpass.getpass(prompt=f"DB {sub_key}: ")
+		else:
+			mariadb[key][sub_key] = input(f"DB {sub_key}: ")
+
 # Write the resulting dictionary to a secret.py file
 with open('secret.py', 'w') as file:
 	file.write("mariadb = " + json.dumps(mariadb, indent=4).replace('"', "'").replace("    ","\t") + "\n")
-	file.write("telegram = " + json.dumps(telegram, indent=4).replace('"', "'").replace("    ","\t"))
+	file.write("telegram = " + json.dumps(telegram, indent=4).replace('"', "'").replace("    ","\t") + "\n")
+	file.write("configuration = " + json.dumps(configuration, indent=4).replace('"', "'").replace("    ","\t"))
 
 import secret
 
@@ -132,18 +153,25 @@ for x in myCursor:
 	existingTables.append(x[0])
 
 # Creating (non installed) tables from myTables dictionary
+tableAddedCount = 0
 for table in myTables:
 	if table not in existingTables:
 		fieldOutput = ''
 		statement = ''
-		for field_name, field_info in myTables[table].items():
-		    fieldOutput += f"{field_name} {field_info['type']}, "
 
-		fieldOutput = fieldOutput[:-2]  # Remove the extra ", " at the end
+		# Generating arguments for the SQL statement
+		for fieldName, fieldInfo in myTables[table].items():
+		    fieldOutput += f"{fieldName} {fieldInfo['type']}, "
 
-		statement = 'CREATE TABLE ' + table + ' (' + fieldOutput + ')' # Creating the SQL statement
+		# Remove the extra ", " at the end
+		fieldOutput = fieldOutput[:-2]
 
+		# Generating SQL statement from variables
+		statement = 'CREATE TABLE ' + table + ' (' + fieldOutput + ')'
+
+		# Executing the SQL statement
 		myCursor.execute(statement)
-		print("1 TABLES added.")
+		tableAddedCount += 1
 
+print(f"{tableAddedCount} TABLES added.")
 myCursor.close()
