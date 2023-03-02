@@ -234,7 +234,7 @@ def avalibilityCheck(vidId):
 		isAvalible = False
 		avalibilityType = "private"
 	else:
-		if '"playabilityStatus":{"status":"ERROR","reason":"' in responseText or 'playabilityStatus":{"status":"ERROR"' in responseText:
+		if '"playabilityStatus":{"status":"ERROR","reason":"' in responseText:
 			isAvalible = False
 			avalibilityType = "deleted"
 		else:
