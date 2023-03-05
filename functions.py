@@ -6,6 +6,8 @@ import datetime
 import os
 import re
 
+from yt_dlp import YoutubeDL
+
 # Define coulors
 colours = {
 	'red': "\033[0;31m",
@@ -41,30 +43,6 @@ def colourPriority(priority):
 				priorityColor = coloursB['red']
 	return priorityColor
 
-# Function that messages the 'Host' using credentials from secret.py
-def msgHost(query):
-	telegramToken = secret.telegram['credentials']['token']
-	formatedQuote = urllib.parse.quote(query)
-	hostChatId = secret.telegram['chatid']['hostChatId']
-	requests.get("https://api.telegram.org/bot{}/sendMessage?chat_id={}&text={}".format(telegramToken,hostChatId,formatedQuote))
-
-# Function that messages every chatid from secret.py
-def msgAll(query):
-	telegramToken = secret.telegram['credentials']['token']
-	formatedQuote = urllib.parse.quote(query)
-	dictionaryCred = secret.telegram['chatid']
-	for key in ['hostChatId', 'userChatId', 'adminChatId']:
-		value = dictionaryCred[key]
-		if isinstance(value, list):
-			for item in value:
-				if item:
-					currentUserChatId = item
-					requests.get("https://api.telegram.org/bot{}/sendMessage?chat_id={}&text={}".format(telegramToken,currentUserChatId,formatedQuote))
-		else:
-			if value:
-				currentUserChatId = value
-				requests.get("https://api.telegram.org/bot{}/sendMessage?chat_id={}&text={}".format(telegramToken,currentUserChatId,formatedQuote))
-
 # Defining DB configuration
 mydb = database.connect(
 	host=secret.mariadb['connection']['host'],
@@ -77,6 +55,7 @@ mydb = database.connect(
 chDataCursor = mydb.cursor(buffered=True)
 delDataCursor = mydb.cursor(buffered=True)
 getDataCursor = mydb.cursor(buffered=True)
+countDataCursor = mydb.cursor(buffered=True)
 addChatIdDataCursor = mydb.cursor(buffered=True)
 addContentDataCursor = mydb.cursor(buffered=True)
 addAccountDataCursor = mydb.cursor(buffered=True)
@@ -95,35 +74,24 @@ def addAccountData(title, channelid, priority):
 		print(f"Error adding entry from {mydb.database}[{table}]: {e}")
 
 # Function for adding instances to the content table
-def addChatIdData(name, id, priority):
+def addChatIdData(name, id, priority, authenticated):
 	try:
-		table = 'content'
-		statement = "INSERT INTO content VALUES (\"{}\", \"{}\", \"{}\")".format(mydb.converter.escape(name),name,id,priority)
+		table = 'chatid'
+		statement = f"INSERT INTO {table} VALUES (\"{mydb.converter.escape(name)}\", \"{id}\", \"{priority}\", \"{authenticated}\")"
 		addChatIdDataCursor.execute(statement)
 		mydb.commit()
-		#print(addChatIdDataCursor.rowcount, "record inserted.")
+		print(addChatIdDataCursor.rowcount, "record inserted.")
 	except database.Error as e:
 		print(f"Error adding entry from {mydb.database}[{table}]: {e}")
 
 # Function for adding instances to the content table
-def addContentData(title, childfrom, vidid, videopath, extention, deleted, requestuser, uploaddate):
+def addContentData(title, childfrom, id, videopath, extention, deleted, deleteddate, deletedtype, requestuser, uploaddate):
 	try:
 		table = 'content'
-		statement = "INSERT INTO content VALUES (\"{}\", \"{}\", \"{}\", \"{}\", \"{}\", {}, \"{}\", \"{}\")".format(mydb.converter.escape(title),mydb.converter.escape(childfrom),vidid,mydb.converter.escape(videopath),extention,deleted,requestuser,uploaddate)
+		statement = f"INSERT INTO content VALUES (\"{mydb.converter.escape(title)}\", \"{mydb.converter.escape(childfrom)}\", \"{id}\", \"{mydb.converter.escape(videopath)}\", \"{extention}\", {deleted}, \"{deleteddate}\", \"{deletedtype}\", \"{requestuser}\", \"{uploaddate}\")"
 		addContentDataCursor.execute(statement)
 		mydb.commit()
 		#print(addContentDataCursor.rowcount, "record inserted.")
-	except database.Error as e:
-		print(f"Error adding entry from {mydb.database}[{table}]: {e}")
-
-# Function for adding instances to the content table
-def addDeletedContentData(title, childfrom, vidid, videopath, extention, deleted, requestuser, uploaddate):
-	try:
-		table = 'content'
-		statement = "INSERT INTO content VALUES (\"{}\", \"{}\", \"{}\", \"{}\", \"{}\", {}, \"{}\", \"{}\")".format(mydb.converter.escape(title),mydb.converter.escape(childfrom),vidid,mydb.converter.escape(videopath),extention,deleted,requestuser,uploaddate)
-		addDeletedContentDataCursor.execute(statement)
-		mydb.commit()
-		#print(addDeletedContentDataCursor.rowcount, "record inserted.")
 	except database.Error as e:
 		print(f"Error adding entry from {mydb.database}[{table}]: {e}")
 
@@ -135,8 +103,6 @@ def delData(table, instanceid):
 		mydb.commit()
 		if delDataCursor.rowcount == 0:
 			print("No rows where deleted.")
-		else:
-			print(delDataCursor.rowcount, "rows deleted.")
 	except database.Error as e:
 		print(f"Error deleting entry from {mydb.database}[{table}]: {e}")
 
@@ -173,12 +139,57 @@ def chData(table, id, column, newData):
 		statement = "UPDATE " + table + " SET {}=\"{}\" WHERE id=\"{}\"".format(column,newData,id)
 		chDataCursor.execute(statement)
 		mydb.commit()
-		if chDataCursor.rowcount == 0:
-			print("ERROR: no rows updated")
-		else:
-			print(chDataCursor.rowcount, "rows updated.")
 	except database.Error as e:
 		print(f"Error manipulating data from {mydb.database}[{table}]: {e}")
+
+def countData(table, column, arg):
+	if arg == 'ALL':
+		statement = f'SELECT COUNT(ALL {column}) FROM {table}'
+	else:
+		statement = f'SELECT COUNT(ALL {column}) FROM {table} WHERE {column}=\'{arg}\''
+
+	countDataCursor.execute(statement)
+	return countDataCursor
+
+# Function that messages the 'Host' using credentials from secret.py
+def msgHost(query):
+	telegramToken = secret.telegram['credentials']['token']
+	formatedQuote = urllib.parse.quote(query)
+	for x in getData("chatid", 'priority', '1'):
+		hostChatId = x[1]
+	requests.get(f"https://api.telegram.org/bot{telegramToken}/sendMessage?chat_id={hostChatId}&text={formatedQuote}")
+
+# Function that messages every chatid from secret.py
+def msgAll(query):
+	telegramToken = secret.telegram['credentials']['token']
+	formatedQuote = urllib.parse.quote(query)
+	for x in getData("chatid", 'priority', 'ALL'):
+		currentUserChatId = x[1]
+		requests.get(f"https://api.telegram.org/bot{telegramToken}/sendMessage?chat_id={currentUserChatId}&text={formatedQuote}")
+
+def downloadVid(vidId, channelTitle, filename):
+	rootDownloadDir = secret.configuration['general']['backupDir']
+	ydl_opts = {
+		'outtmpl': f'{rootDownloadDir}/{channelTitle}/{filename}',
+		'subtitleslangs': ['all', '-live_chat'],
+		'writesubtitles': True,
+		'embedsubtitles': True,
+		'format': 'bestvideo+bestaudio[ext=m4a]/bestvideo+bestaudio'
+	}
+	success = False
+	tries = 0
+	while not success:
+		try:
+			if tries == 5:
+				break 
+			with YoutubeDL(ydl_opts) as ydl:
+				ydl.download([f'https://www.youtube.com/watch?v={vidId}'])
+			success = True
+			e = success
+		except Exception as e:
+			print(f"Download failed: {e}")
+			tries += 1
+	return success, e
 
 # Convert non filename friendly srt to filename friendly
 def filenameFriendly(srtValue):
@@ -229,18 +240,18 @@ def avalibilityCheck(vidId):
 	#return False, responseText
 
 	isAvalible = True
-	avalibilityType = "public"
+	avalibilityType = "Public"
 	if '"playabilityStatus":{"status":"LOGIN_REQUIRED","messages"' in responseText:
 		isAvalible = False
-		avalibilityType = "private"
+		avalibilityType = "Private"
 	else:
 		if '"playabilityStatus":{"status":"ERROR","reason":"' in responseText:
 			isAvalible = False
-			avalibilityType = "deleted"
+			avalibilityType = "Deleted"
 		else:
 			if '><meta itemprop="unlisted" content="True">' in responseText:
 				isAvalible = False
-				avalibilityType = "unlisted"
+				avalibilityType = "Unlisted"
 
 	return isAvalible, avalibilityType
 
@@ -249,6 +260,7 @@ def closeCursor():
 	chDataCursor.close()
 	delDataCursor.close()
 	getDataCursor.close()
+	countDataCursor.close()
 	addChatIdDataCursor.close()
 	addContentDataCursor.close()
 	addAccountDataCursor.close()

@@ -2,7 +2,6 @@ import os
 import mysql.connector as database
 import json
 import getpass
-import functions
 
 # Defining the dictionary structure
 mariadb = {
@@ -18,19 +17,32 @@ mariadb = {
 
 telegram = {
 	'credentials': {
-		'token': ''
-	},
+		'token': '',
+		'userpass': ''
+	}
+}
+
+telegramSql = {
 	'chatid': {
-		'hostChatId': '',
-		'adminChatId': [''],
-		'userChatId': ['']
+		'hostChatId': {
+			'id': '',
+			'priority' : '1'
+		},
+		'adminChatId': {
+			'id': '',
+			'priority' : '2'
+		},
+		'userChatId': {
+			'id': '',
+			'priority' : '3'
+		}
 	}
 }
 
 configuration = {
 	'general': {
 		'backupDir': ''
-	}, 
+	}
 }
 
 # Defining diffirent tables and types
@@ -65,6 +77,12 @@ myTables = {
 		'deleted': {
 			'type': 'int(11)'
 		},
+		'deleteddate': {
+			'type': 'text'
+		},
+		'deletedtype': {
+			'type': 'text'
+		},
 		'requestuser': {
 			'type': 'varchar(11)'
 		},
@@ -81,20 +99,9 @@ myTables = {
 		},
 		'priority': {
 			'type': 'int(11)'
-		}
+		},
 		'authenticated': {
-			'type': 'char(3)'
-		},
-	},
-	'deletedcontent': {
-		'id': {
-			'type': 'char(12)'
-		},
-		'deleteddate': {
-			'type': 'text'
-		},
-		'deletedtype': {
-			'type': 'int(11)'
+			'type': 'char(5)'
 		}
 	}
 }
@@ -110,23 +117,21 @@ for key in telegram:
 	if key == 'credentials':
 		for sub_key in telegram[key]:
 			telegram[key][sub_key] = getpass.getpass(prompt=f"Telegram {sub_key}: ")
-	else:
-		for sub_key in telegram[key]:
-			if sub_key == 'hostChatId':
-				telegram[key][sub_key] = input(f"Telegram {sub_key}: ")	
+
+for key in telegramSql:
+	for sub_key in telegramSql[key]:
+		if sub_key == 'hostChatId':
+			telegramSql[key][sub_key]['id'] = input(f"Telegram {sub_key}: ")
+		else:
+			value = input(f"Telegram (seperate w/ ',') {sub_key}: ")
+			if ',' in value:
+				telegramSql[key][sub_key]['id'] = value.split(',')
 			else:
-				value = input(f"Telegram (seperate w/ ',') {sub_key}: ")
-				if ',' in value:
-					telegram[key][sub_key] = value.split(',')
-				else:
-					telegram[key][sub_key] = value
+				telegramSql[key][sub_key]['id'] = value
 
 for key in configuration:
 	for sub_key in configuration[key]:
-		if sub_key == 'password':
-			mariadb[key][sub_key] = getpass.getpass(prompt=f"DB {sub_key}: ")
-		else:
-			mariadb[key][sub_key] = input(f"DB {sub_key}: ")
+		configuration[key][sub_key] = input(f"Config {sub_key}: ")
 
 # Write the resulting dictionary to a secret.py file
 with open('secret.py', 'w') as file:
@@ -135,6 +140,7 @@ with open('secret.py', 'w') as file:
 	file.write("configuration = " + json.dumps(configuration, indent=4).replace('"', "'").replace("    ","\t"))
 
 import secret
+import functions
 
 # Defining connection variable
 mydb = database.connect(
@@ -174,4 +180,14 @@ for table in myTables:
 		tableAddedCount += 1
 
 print(f"{tableAddedCount} TABLES added.")
+
+for key in telegramSql:
+	for sub_key in telegramSql[key]:
+		if telegramSql[key][sub_key]['id']:
+			if isinstance(telegramSql[key][sub_key]['id'], list):
+				for eachSplitValue in telegramSql[key][sub_key]['id']:
+					functions.addChatIdData('N/A', eachSplitValue, telegramSql[key][sub_key]['priority'], 'N/A')
+			else:
+				functions.addChatIdData('N/A', telegramSql[key][sub_key]['id'], telegramSql[key][sub_key]['priority'], 'N/A')
+
 myCursor.close()
