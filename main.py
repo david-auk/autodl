@@ -1,5 +1,4 @@
 import os
-import yt_dlp
 import scrapetube
 import datetime
 import functions
@@ -8,7 +7,8 @@ import functions
 
 requestuser = "scanner" # This will be the default value of the 'reqester' field in SQL
 totalRecordsAdded = 0 # So we can count upwards	
-totalRecordsSkipped = 0 # So we can count upwards	
+totalRecordsSkipped = 0 # So we can count upwards
+skipDownload = False
 
 ## Basic definition end.
 
@@ -44,7 +44,7 @@ for (channelTitle, id, priority) in myCursorChannelRequest:
 			if isInPremiere:
 				print(f"[{functions.coloursB['yellow']}?{functions.colours['reset']}] https://www.youtube.com/watch?v={vidId}\nVideo in premiere, skipping\n")
 				totalRecordsSkipped += 1
-				break
+				continue
 
 			# Printing 'Failed' status for if the entry exists
 			print(f"[{functions.coloursB['red']}X{functions.colours['reset']}] https://www.youtube.com/watch?v={vidId}")
@@ -55,15 +55,24 @@ for (channelTitle, id, priority) in myCursorChannelRequest:
 
 			# Making the path filename friendly
 			filename = functions.filenameFriendly(videoTitle)
-			functions.addContentData(videoTitle,channelTitle,vidId,filename,"N/A",0, requestuser,formattedDate)
 
-			totalRecords += functions.addContentDataCursor.rowcount
-			# Download file here
+			# Deciding if the video will be downloaded
+			if skipDownload:
+				functions.addContentData(videoTitle,channelTitle,vidId,filename,'N/A',0,'N/A','public',requestuser,formattedDate)
+				totalRecordsAdded += functions.addContentDataCursor.rowcount
+			else:
 
-			# functions.chData("content", vidId, "downloaddate", "12-02-1992")
+				# Downloading the acctual video
+				success, failureType = functions.downloadVid(vidId, channelTitle, filename)
+				if success:
 
-			print("\n")
+					# Adding the record to the 'Content' table
+					functions.addContentData(videoTitle,channelTitle,vidId,filename,'N/A',0,'N/A','public',requestuser,formattedDate)
+					totalRecordsAdded += functions.addContentDataCursor.rowcount
+				else:
 
+					# Notify host downloading gives error
+					functions.msgHost(f"Downloading https://www.youtube.com/watch?v={vidId} from {channelTitle}\ngave ERROR: {failureType}")
 
 print(f"{functions.coloursB['white']}{totalRecordsAdded}{functions.colours['reset']} Records inserted.")
 if totalRecordsSkipped:
