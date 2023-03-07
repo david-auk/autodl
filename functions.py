@@ -134,7 +134,7 @@ def getDataContentCheck(table, instanceid):
 	except database.Error as e:
 		print(f"Error retrieving entry from {mydb.database}[{table}]: {e}")
 
-# Function changing data of a table
+# Function for changing data of a table
 def chData(table, id, column, newData):
 	try:
 		statement = "UPDATE " + table + " SET {}=\"{}\" WHERE id=\"{}\"".format(column,newData,id)
@@ -143,6 +143,7 @@ def chData(table, id, column, newData):
 	except database.Error as e:
 		print(f"Error manipulating data from {mydb.database}[{table}]: {e}")
 
+# Function for counting data of a table
 def countData(table, column, arg):
 	if arg == 'ALL':
 		statement = f'SELECT COUNT(ALL {column}) FROM {table}'
@@ -168,6 +169,7 @@ def msgAll(query):
 		currentUserChatId = x[1]
 		requests.get(f"https://api.telegram.org/bot{telegramToken}/sendMessage?chat_id={currentUserChatId}&text={formatedQuote}")
 
+# Function for downloading video
 def downloadVid(vidId, channelTitle, filename):
 	rootDownloadDir = secret.configuration['general']['backupDir']
 	ydl_opts = {
@@ -255,7 +257,7 @@ def writeDescription(channelTitle, filename, description):
 		f.write(str(description))
 		print(f"{coloursB['green']}√{colours['reset']} description written")
 
-# Convert non filename friendly srt to filename friendly
+# Function for converting non filename friendly srt to filename friendly
 def filenameFriendly(srtValue):
 
 	# Lowercase all characters
@@ -275,6 +277,7 @@ def filenameFriendly(srtValue):
 	
 	return filename
 
+# Function for getting vidId
 def getVidId(link):
 	
 	# Check if the URL is in the format https://youtu.be/<video_id>
@@ -291,6 +294,7 @@ def getVidId(link):
 	
 	return video_id
 
+# Function for saving facts of a video to a dictionary
 def getFacts(vidId, channelTitle, filename):
 	rootDownloadDir = secret.configuration['general']['backupDir']
 	ydl_opts = {
@@ -311,6 +315,7 @@ def getFacts(vidId, channelTitle, filename):
 		uploadDate = f"{day}-{month}-{year}"
 		return info, uploadDate
 
+# Function for checking if the vidId is still online
 def avalibilityCheck(vidId):
 
 	# Create full link
@@ -339,7 +344,7 @@ def avalibilityCheck(vidId):
 
 	return isAvalible, avalibilityType
 
-# Closing all the cursors at once
+# Function for closing all the cursors at once
 def closeCursor():
 	chDataCursor.close()
 	delDataCursor.close()
