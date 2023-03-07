@@ -1,4 +1,5 @@
 import mysql.connector as database
+import urllib.request
 import urllib.parse
 import requests
 import secret
@@ -191,6 +192,69 @@ def downloadVid(vidId, channelTitle, filename):
 			tries += 1
 	return success, e
 
+# Function for saving thumbnail
+def downloadThumbnail(vidId, channelTitle, filename, secondLink):
+	rootDownloadDir = secret.configuration['general']['backupDir']
+	destinationDir = f'{rootDownloadDir}/{channelTitle}/thumbnail'
+
+	# Check if path exists, if not create directory
+	if not os.path.exists(destinationDir):
+		os.makedirs(destinationDir)
+
+	url = f'https://img.youtube.com/vi/{vidId}/maxresdefault.jpg'
+	filename = f'{destinationDir}/{filename}.jpg'
+
+	success = False
+	tries = 0
+	while not success:
+		try:
+			if tries == 5:
+				break 
+			urllib.request.urlretrieve(url, filename)	# Downloading the url
+			print(f"{coloursB['green']}√{colours['reset']} MAX quality thumbnail")
+			success = True
+		except Exception as e:
+			print(f"{coloursB['red']}X{colours['reset']} MAX quality thumbnail")
+			tries += 1
+
+	if success:
+		return success
+
+	url = secondLink
+
+	tries = 0
+	while not success:
+		try:
+			if tries == 5:
+				break 
+			urllib.request.urlretrieve(url, filename)	# Downloading the url
+			print(f"{coloursB['yellow']}√{colours['reset']} Generic quality thumbnail")
+			success = True
+		except Exception as e:
+			print(f"{coloursB['red']}X{colours['reset']} Generic quality thumbnail")
+			tries += 1
+
+	if success:
+		return success
+	else:
+		msgHost(f"ERROR: Could not download thumbnail, Account: \'{channelTitle}\", Url: \'https://www.youtube.com/watch?v={vidId}\'")
+		quit()
+
+# Function for writing description of video
+def writeDescription(channelTitle, filename, description):
+	rootDownloadDir = secret.configuration['general']['backupDir']
+	destinationDir = f'{rootDownloadDir}/{channelTitle}/description'
+
+	# Check if path exists, if not create directory
+	if not os.path.exists(destinationDir):
+		os.makedirs(destinationDir)
+
+	filename = f'{destinationDir}/{filename}.txt'
+
+	with open(filename, 'w') as f:
+		f.write(str(description))
+		print(f"{coloursB['green']}√{colours['reset']} description written")
+
 # Convert non filename friendly srt to filename friendly
 def filenameFriendly(srtValue):
 
@@ -226,6 +290,26 @@ def getVidId(link):
 		video_id = params['v']
 	
 	return video_id
+
+def getFacts(vidId, channelTitle, filename):
+	rootDownloadDir = secret.configuration['general']['backupDir']
+	ydl_opts = {
+		'outtmpl': f'{rootDownloadDir}/{channelTitle}/{filename}',
+		'subtitleslangs': ['all', '-live_chat'],
+		'writesubtitles': True,
+		'embedsubtitles': True,
+		'format': 'bestvideo+bestaudio[ext=m4a]/bestvideo+bestaudio',
+		'quiet': True
+	}
+	with YoutubeDL(ydl_opts) as ydl:
+		info = ydl.extract_info(f'https://www.youtube.com/watch?v={vidId}', download=False)
+
+		uploadDate = info['upload_date']
+		year = uploadDate[:4]
+		month = uploadDate[4:6]
+		day = uploadDate[6:]
+		uploadDate = f"{day}-{month}-{year}"
+		return info, uploadDate
 
 def avalibilityCheck(vidId):
 
