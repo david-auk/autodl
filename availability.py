@@ -54,4 +54,3 @@ for (title, childfrom, id, videopath, extention, deleted, deleteddate, deletedty
 			functions.chData('content', id, 'deletedtype', 'public')
 			functions.chData('content', id, 'deleteddate', formattedDate)
 			functions.msgAll(f"{title}. from \'{childfrom}\' just got put back Online from {deletedtype}\nhttps://www.youtube.com/watch?v={id}")
-	break
