@@ -14,9 +14,9 @@ for x in totalRows:
 
 currentRequestNum = 0
 myCursorContentRequest = functions.getData('content', 'id', 'ALL')
-for (title, childfrom, id, videopath, extention, deleted, deleteddate, deletedtype, requestuser, downloaddate) in myCursorContentRequest:
+for (title, childfrom, id, videopath, extention, deleted, deleteddate, deletedtype, requestuser, uploaddate) in myCursorContentRequest:
 	isAvalible, avalibilityType = functions.avalibilityCheck(id)
-	
+
 	currentRequestNum += 1
 
 	count = len(f'{currentRequestNum}/{totalRows}') + len(f'{100/totalRows*currentRequestNum:.2f}%')
@@ -36,10 +36,22 @@ for (title, childfrom, id, videopath, extention, deleted, deleteddate, deletedty
 			functions.chData('content', id, 'deleted', 1)
 			functions.chData('content', id, 'deletedtype', avalibilityType)
 			functions.chData('content', id, 'deleteddate', formattedDate)
-	else: # If the content is avalible
+			if avalibilityType == 'Private':
+				functions.msgAll(f"{title} from \'{childfrom}\' just got Privated, not Deleted ")
+			else:
+				if avalibilityType == 'Deleted':
+					functions.msgAll(f"{title} from \'{childfrom}\' just got Deleted, not Privated")
+				else:
+					if avalibilityType == 'Unlisted':
+						functions.msgAll(f"{title} from \'{childfrom}\' just got Unlisted \nhttps://www.youtube.com/watch?v={id}")
+
+	# If the content is avalible
+	else:
 		if deleted == 1: # He just got back online
 			print(f"{functions.coloursB['green']}{avalibilityType.upper()}{functions.colours['reset']} - {id} | {title}")
 			print(f'  ^ The first time detecting this as {avalibilityType} (Again)\n')
 			functions.chData('content', id, 'deleted', 0)
 			functions.chData('content', id, 'deletedtype', 'public')
 			functions.chData('content', id, 'deleteddate', formattedDate)
+			functions.msgAll(f"{title}. from \'{childfrom}\' just got put back Online from {deletedtype}\nhttps://www.youtube.com/watch?v={id}")
+	break
