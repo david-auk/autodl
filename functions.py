@@ -305,15 +305,29 @@ def getFacts(vidId, channelTitle, filename):
 		'format': 'bestvideo+bestaudio[ext=m4a]/bestvideo+bestaudio',
 		'quiet': True
 	}
-	with YoutubeDL(ydl_opts) as ydl:
-		info = ydl.extract_info(f'https://www.youtube.com/watch?v={vidId}', download=False)
 
-		uploadDate = info['upload_date']
-		year = uploadDate[:4]
-		month = uploadDate[4:6]
-		day = uploadDate[6:]
-		uploadDate = f"{day}-{month}-{year}"
-		return info, uploadDate
+	success = False
+	tries = 0
+	while not success:
+		try:
+			if tries == 3:
+				break 
+			with YoutubeDL(ydl_opts) as ydl:
+				info = ydl.extract_info(f'https://www.youtube.com/watch?v={vidId}', download=False)
+			success = True
+		except Exception as e:
+			tries += 1
+	if success is False:
+		info = 'N/A'
+		uploadDate = 'N/A'
+		return success, info, uploadDate
+	
+	uploadDate = info['upload_date']
+	year = uploadDate[:4]
+	month = uploadDate[4:6]
+	day = uploadDate[6:]
+	uploadDate = f"{day}-{month}-{year}"
+	return success, info, uploadDate
 
 # Function for checking if the vidId is still online
 def avalibilityCheck(vidId):
