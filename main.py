@@ -55,7 +55,11 @@ for (channelTitle, id, priority) in myCursorChannelRequest:
 			filename = functions.filenameFriendly(videoTitle)
 
 			# Gather facts
-			vidInfo, uploadDate = functions.getFacts(vidId, channelTitle, filename)
+			success, vidInfo, uploadDate = functions.getFacts(vidId, channelTitle, filename)
+
+			if success is False:
+				print(f"[{functions.coloursB['yellow']}Skipping{functions.colours['reset']}]\n")
+				continue
 
 			videoExtention = vidInfo['ext']
 
@@ -73,14 +77,20 @@ for (channelTitle, id, priority) in myCursorChannelRequest:
 				# Downloading the actual video				
 				success, failureType = functions.downloadVid(vidId, channelTitle, filename)
 				print('') # Newline
-				if success is False:
+				if success:
+
+					# Adding new entry to 'content' table
+					functions.addContentData(videoTitle,channelTitle,vidId,filename,videoExtention,0,'N/A','public',requestuser,uploadDate)
+					totalRecordsAdded += functions.addContentDataCursor.rowcount
+			
+				else:
 
 					# Notify host downloading gives error
 					functions.msgHost(f"Downloading https://www.youtube.com/watch?v={vidId} from {channelTitle}\ngave ERROR: {failureType}")
 
-			# Adding new entry to 'content' table
-			functions.addContentData(videoTitle,channelTitle,vidId,filename,videoExtention,0,'N/A','public',requestuser,uploadDate)
-			totalRecordsAdded += functions.addContentDataCursor.rowcount
+			## Adding new entry to 'content' table
+			#functions.addContentData(videoTitle,channelTitle,vidId,filename,videoExtention,0,'N/A','public',requestuser,uploadDate)
+			#totalRecordsAdded += functions.addContentDataCursor.rowcount
 
 print(f"{functions.coloursB['white']}{totalRecordsAdded}{functions.colours['reset']} Records inserted.")
 if totalRecordsSkipped:
