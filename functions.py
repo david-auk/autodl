@@ -277,23 +277,6 @@ def filenameFriendly(srtValue):
 	
 	return filename
 
-# Function for getting vidId
-def getVidId(link):
-	
-	# Check if the URL is in the format https://youtu.be/<video_id>
-	if 'youtu.be' in link:
-
-		# Extract the video ID from the URL
-		video_id = link.split('/')[-1].split('?')[0]
-	else:
-
-		# Extract the video ID from the query string of the URL
-		query_string = link.split('?')[1]
-		params = dict(item.split('=') for item in query_string.split('&'))
-		video_id = params['v']
-	
-	return video_id
-
 # Function for saving facts of a video to a dictionary
 def getFacts(vidId, channelTitle, filename):
 	rootDownloadDir = secret.configuration['general']['backupDir']
@@ -302,7 +285,7 @@ def getFacts(vidId, channelTitle, filename):
 		'subtitleslangs': ['all', '-live_chat'],
 		'writesubtitles': True,
 		'embedsubtitles': True,
-		'format': 'bestvideo+bestaudio[ext=m4a]/bestvideo+bestaudio',
+		'format': 'bestvideo+bestaudio/bestvideo+bestaudio',
 		'quiet': True
 	}
 
@@ -328,6 +311,23 @@ def getFacts(vidId, channelTitle, filename):
 	day = uploadDate[6:]
 	uploadDate = f"{day}-{month}-{year}"
 	return success, info, uploadDate
+
+# Function for getting vidId
+def getVidId(link):
+	
+	# Check if the URL is in the format https://youtu.be/<video_id>
+	if 'youtu.be' in link:
+
+		# Extract the video ID from the URL
+		video_id = link.split('/')[-1].split('?')[0]
+	else:
+
+		# Extract the video ID from the query string of the URL
+		query_string = link.split('?')[1]
+		params = dict(item.split('=') for item in query_string.split('&'))
+		video_id = params['v']
+	
+	return video_id
 
 # Function for checking if the vidId is still online
 def avalibilityCheck(vidId):
