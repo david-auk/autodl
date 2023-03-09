@@ -59,6 +59,7 @@ for (channelTitle, id, priority) in myCursorChannelRequest:
 
 			if success is False:
 				print(f"[{functions.coloursB['yellow']}Skipping{functions.colours['reset']}]\n")
+				totalRecordsSkipped += 1
 				continue
 
 			videoExtention = vidInfo['ext']

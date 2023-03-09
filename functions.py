@@ -337,26 +337,35 @@ def avalibilityCheck(vidId):
 
 	# Make a request to the video page
 	response = requests.get(url)
-
 	responseText = response.content.decode('utf-8')
 
-	#return False, responseText
-
+	# Defining default values
 	isAvalible = True
 	avalibilityType = "Public"
+	striker = 'N/A'
+
+	# Checking for certain html values
 	if '"playabilityStatus":{"status":"LOGIN_REQUIRED","messages"' in responseText:
 		isAvalible = False
 		avalibilityType = "Private"
 	else:
 		if '"playabilityStatus":{"status":"ERROR","reason":"' in responseText:
 			isAvalible = False
-			avalibilityType = "Deleted"
+			for line in responseText.split("\n"):
+				if '"playabilityStatus":{"status":"ERROR","reason":"' in line:
+					result = re.search(r'(?<=},{"text":")(.*?)(?="})', line)
+					if result:
+						striker = result.group(1)
+						avalibilityType = "Striked"
+					else:
+						avalibilityType = "Deleted"
+					break
 		else:
 			if '><meta itemprop="unlisted" content="True">' in responseText:
 				isAvalible = False
 				avalibilityType = "Unlisted"
 
-	return isAvalible, avalibilityType
+	return isAvalible, avalibilityType, striker
 
 # Function for closing all the cursors at once
 def closeCursor():

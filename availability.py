@@ -15,7 +15,7 @@ for x in totalRows:
 currentRequestNum = 0
 myCursorContentRequest = functions.getData('content', 'id', 'ALL')
 for (title, childfrom, id, videopath, extention, deleted, deleteddate, deletedtype, requestuser, uploaddate) in myCursorContentRequest:
-	isAvalible, avalibilityType = functions.avalibilityCheck(id)
+	isAvalible, avalibilityType, striker = functions.avalibilityCheck(id)
 
 	currentRequestNum += 1
 
@@ -26,10 +26,10 @@ for (title, childfrom, id, videopath, extention, deleted, deleteddate, deletedty
 
 	if isAvalible is False:
 		if avalibilityType == 'Deleted' or avalibilityType == 'Private':
-			print(f"{functions.coloursB['red']}{avalibilityType.upper()}{functions.colours['reset']} - {id} | {title}")
+			print(f"{functions.coloursB['red']}{avalibilityType.upper()}{functions.colours['reset']} - {id} | {childfrom} |{title}")
 		else:
-			if avalibilityType == 'Unlisted':
-				print(f"{functions.coloursB['yellow']}Unlisted{functions.colours['reset']} - {id} | {title}")	
+			if avalibilityType == 'Unlisted' or avalibilityType == 'Striked':
+				print(f"{functions.coloursB['yellow']}{avalibilityType}{functions.colours['reset']} - {id} | {childfrom} |{title}")	
 
 		if deleted == 0: # He just got deleted
 			print(f'  ^ The first time detecting this as {avalibilityType}\n')
@@ -44,6 +44,9 @@ for (title, childfrom, id, videopath, extention, deleted, deleteddate, deletedty
 				else:
 					if avalibilityType == 'Unlisted':
 						functions.msgAll(f"{title} from \'{childfrom}\' just got Unlisted \nhttps://www.youtube.com/watch?v={id}")
+					else:
+						if avalibilityType == 'Striked':
+							functions.msgAll(f"{title} from \'{childfrom}\' just got Striked by {striker}.")
 
 	# If the content is avalible
 	else:
