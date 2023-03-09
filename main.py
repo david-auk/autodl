@@ -20,7 +20,7 @@ parser.add_argument('-t', '--time', action='store_true', help='Enable verbose mo
 args = parser.parse_args()
 if args.time:
 	now = datetime.datetime.now()
-	if now.minute % 20 == 0:
+	if now.minute % 15 == 0:
 		requiredPriority = 3 # One, two, three. All
 	else:
 		if now.minute % 10 == 0:
