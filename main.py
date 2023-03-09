@@ -1,9 +1,8 @@
 import os
+import argparse
 import scrapetube
 import datetime
 import functions
-
-from yt_dlp import YoutubeDL
 
 ## Basic definition start.
 
@@ -14,12 +13,34 @@ skipDownload = False
 
 ## Basic definition end.
 
-myCursorChannelRequest = functions.getData("account", "id", 'ALL')
+## Flags start.
+
+parser = argparse.ArgumentParser(description='A python script to check & download latestvideo')
+parser.add_argument('-t', '--time', action='store_true', help='Enable verbose mode.')
+args = parser.parse_args()
+if args.time:
+	now = datetime.datetime.now()
+	if now.minute % 20 == 0:
+		requiredPriority = 3 # One, two, three. All
+	else:
+		if now.minute % 10 == 0:
+			requiredPriority = 2 # One, two
+		else:
+			requiredPriority = 1 # One
+	operator = '<'
+	print(f"\n{functions.coloursB['white']}Type pull:{functions.colours['reset']} {functions.colourPriority(requiredPriority)}•{functions.colours['reset']}\n")
+	requiredPriority += 1
+else:
+	requiredPriority = 'ALL'
+	operator = '='
+
+## Flags end.
+
+myCursorChannelRequest = functions.getData("account", "priority", operator, requiredPriority)
 for (channelTitle, id, priority) in myCursorChannelRequest:
 
 	# Creating the prompt with corosponding colour
-	priorityColor = functions.colourPriority(priority)
-	print(f"{priorityColor}•{functions.colours['reset']} {functions.coloursB['white']}{channelTitle}:{functions.colours['reset']}")
+	print(f"{functions.colourPriority(priority)}•{functions.colours['reset']} {functions.coloursB['white']}{channelTitle}:{functions.colours['reset']}")
 
 	# Getting all the videos of current youtube channel in 'account' table
 	videos = scrapetube.get_channel(id)	
@@ -88,10 +109,6 @@ for (channelTitle, id, priority) in myCursorChannelRequest:
 
 					# Notify host downloading gives error
 					functions.msgHost(f"Downloading https://www.youtube.com/watch?v={vidId} from {channelTitle}\ngave ERROR: {failureType}")
-
-			## Adding new entry to 'content' table
-			#functions.addContentData(videoTitle,channelTitle,vidId,filename,videoExtention,0,'N/A','public',requestuser,uploadDate)
-			#totalRecordsAdded += functions.addContentDataCursor.rowcount
 
 print(f"{functions.coloursB['white']}{totalRecordsAdded}{functions.colours['reset']} Records inserted.")
 if totalRecordsSkipped:

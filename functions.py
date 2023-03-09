@@ -108,12 +108,12 @@ def delData(table, instanceid):
 		print(f"Error deleting entry from {mydb.database}[{table}]: {e}")
 
 # Function for searching DB
-def getData(table, column, instanceid):
+def getData(table, column, operator, instanceid):
 	try:
 		if instanceid == "ALL":
 			statement = "SELECT * FROM " + table
 		else:
-			statement = "SELECT * FROM " + table + " WHERE {}=\"{}\"".format(column,instanceid)
+			statement = "SELECT * FROM " + table + " WHERE {} {} \"{}\"".format(column,operator,instanceid)
 		getDataCursor.execute(statement)
 		return getDataCursor
 	except database.Error as e:

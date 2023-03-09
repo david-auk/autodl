@@ -13,7 +13,7 @@ for x in totalRows:
 	totalRows = x[0]
 
 currentRequestNum = 0
-myCursorContentRequest = functions.getData('content', 'id', 'ALL')
+myCursorContentRequest = functions.getData('content', 'id', '=', 'ALL')
 for (title, childfrom, id, videopath, extention, deleted, deleteddate, deletedtype, requestuser, uploaddate) in myCursorContentRequest:
 	isAvalible, avalibilityType, striker = functions.avalibilityCheck(id)
 
