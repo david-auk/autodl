@@ -288,7 +288,7 @@ def getFacts(vidId, channelTitle, filename):
 		'subtitleslangs': ['all', '-live_chat'],
 		'writesubtitles': True,
 		'embedsubtitles': True,
-		'format': 'bestvideo+bestaudio/bestvideo+bestaudio',
+		'format': 'bestvideo+bestaudio[ext=m4a]/bestvideo+bestaudio',
 		'quiet': True
 	}
 

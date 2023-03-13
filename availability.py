@@ -13,8 +13,7 @@ for x in totalRows:
 	totalRows = x[0]
 
 currentRequestNum = 0
-myCursorContentRequest = functions.getData('content', 'id', '=', 'ALL')
-for (title, childfrom, id, videopath, extention, deleted, deleteddate, deletedtype, requestuser, uploaddate) in myCursorContentRequest:
+for (title, childfrom, id, videopath, extention, deleted, deleteddate, deletedtype, requestuser, uploaddate) in functions.getData('content', 'id', '=', 'ALL'):
 	isAvalible, avalibilityType, striker = functions.avalibilityCheck(id)
 
 	currentRequestNum += 1
@@ -47,6 +46,8 @@ for (title, childfrom, id, videopath, extention, deleted, deleteddate, deletedty
 					else:
 						if avalibilityType == 'Striked':
 							functions.msgAll(f"{title} from \'{childfrom}\' just got Striked by {striker}.")
+			print("DEBUG: away from if")
+		print("DEBUG: away from if 2")
 
 	# If the content is avalible
 	else:
