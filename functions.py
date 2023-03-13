@@ -192,6 +192,9 @@ def downloadVid(vidId, channelTitle, filename):
 		except Exception as e:
 			print(f"Download failed: {e}")
 			tries += 1
+		if success:
+			if os.path.exists(f"{rootDownloadDir}/{channelTitle}/{filename}*.vst"):
+				pass #delete {rootDownloadDir}/{channelTitle}/{filename}*.vst
 	return success, e
 
 # Function for saving thumbnail
@@ -300,6 +303,13 @@ def getFacts(vidId, channelTitle, filename):
 			success = True
 		except Exception as e:
 			tries += 1
+			ydl_opts = {
+				'outtmpl': f'{rootDownloadDir}/{channelTitle}/{filename}',
+				'subtitleslangs': ['all', '-live_chat'],
+				'writesubtitles': True,
+				'embedsubtitles': True,
+				'quiet': True
+			}
 	if success is False:
 		info = 'N/A'
 		uploadDate = 'N/A'

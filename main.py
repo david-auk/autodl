@@ -80,6 +80,7 @@ for (channelTitle, id, priority) in myCursorChannelRequest:
 
 			if success is False:
 				print(f"[{functions.coloursB['yellow']}Skipping{functions.colours['reset']}]\n")
+				functions.msgHost(f"Skipped https://www.youtube.com/watch?v={vidId}")
 				totalRecordsSkipped += 1
 				continue
 
