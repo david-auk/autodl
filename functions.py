@@ -165,7 +165,7 @@ def msgHost(query):
 def msgAll(query):
 	telegramToken = secret.telegram['credentials']['token']
 	formatedQuote = urllib.parse.quote(query)
-	for x in getData("chatid", 'priority', 'ALL'):
+	for x in getData("chatid", 'priority', '=', 'ALL'):
 		currentUserChatId = x[1]
 		requests.get(f"https://api.telegram.org/bot{telegramToken}/sendMessage?chat_id={currentUserChatId}&text={formatedQuote}")
 

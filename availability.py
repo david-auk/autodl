@@ -26,10 +26,10 @@ for (title, childfrom, id, videopath, extention, deleted, deleteddate, deletedty
 
 	if isAvalible is False:
 		if avalibilityType == 'Deleted' or avalibilityType == 'Private':
-			print(f"{functions.coloursB['red']}{avalibilityType.upper()}{functions.colours['reset']} - {id} | {childfrom} |{title}")
+			print(f"{functions.coloursB['red']}{avalibilityType.upper()}{functions.colours['reset']} - {id} | {childfrom} | {title}")
 		else:
 			if avalibilityType == 'Unlisted' or avalibilityType == 'Striked':
-				print(f"{functions.coloursB['yellow']}{avalibilityType}{functions.colours['reset']} - {id} | {childfrom} |{title}")	
+				print(f"{functions.coloursB['yellow']}{avalibilityType}{functions.colours['reset']} - {id} | {childfrom} | {title}")	
 
 		if deleted == 0: # He just got deleted
 			print(f'  ^ The first time detecting this as {avalibilityType}\n')
@@ -51,7 +51,7 @@ for (title, childfrom, id, videopath, extention, deleted, deleteddate, deletedty
 	# If the content is avalible
 	else:
 		if deleted == 1: # He just got back online
-			print(f"{functions.coloursB['green']}{avalibilityType.upper()}{functions.colours['reset']} - {id} | {title}")
+			print(f"{functions.coloursB['green']}{avalibilityType.upper()}{functions.colours['reset']} - {id} | {childfrom} | {title}")
 			print(f'  ^ The first time detecting this as {avalibilityType} (Again)\n')
 			functions.chData('content', id, 'deleted', 0)
 			functions.chData('content', id, 'deletedtype', 'public')
