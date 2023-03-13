@@ -36,6 +36,8 @@ else:
 
 ## Flags end.
 
+
+
 myCursorChannelRequest = functions.getData("account", "priority", operator, requiredPriority)
 for (channelTitle, id, priority) in myCursorChannelRequest:
 
@@ -103,7 +105,7 @@ for (channelTitle, id, priority) in myCursorChannelRequest:
 				if success:
 
 					# Adding new entry to 'content' table
-					functions.addContentData(videoTitle,channelTitle,vidId,filename,videoExtention,0,'N/A','public',requestuser,uploadDate)
+					functions.addContentData(videoTitle,channelTitle,vidId,filename,videoExtention,0,'N/A','Public',requestuser,uploadDate)
 					totalRecordsAdded += functions.addContentDataCursor.rowcount
 			
 				else:

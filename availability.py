@@ -29,7 +29,7 @@ for (title, childfrom, id, videopath, extention, deleted, deleteddate, deletedty
 			print(f"{functions.coloursB['red']}{avalibilityType.upper()}{functions.colours['reset']} - {id} | {childfrom} | {title}")
 		else:
 			if avalibilityType == 'Unlisted' or avalibilityType == 'Striked':
-				print(f"{functions.coloursB['yellow']}{avalibilityType}{functions.colours['reset']} - {id} | {childfrom} | {title}")	
+				print(f"{functions.coloursB['yellow']}{avalibilityType.upper()}{functions.colours['reset']} - {id} | {childfrom} | {title}")	
 
 		if deleted == 0: # He just got deleted
 			print(f'  ^ The first time detecting this as {avalibilityType}\n')
