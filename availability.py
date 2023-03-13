@@ -47,6 +47,7 @@ for (title, childfrom, id, videopath, extention, deleted, deleteddate, deletedty
 						if avalibilityType == 'Striked':
 							functions.msgAll(f"{title} from \'{childfrom}\' just got Striked by \'{striker}\'")
 			print("DEBUG: away from if")
+			deleted = ''
 		print("DEBUG: away from if 2")
 
 	# If the content is avalible
@@ -58,5 +59,5 @@ for (title, childfrom, id, videopath, extention, deleted, deleteddate, deletedty
 			functions.chData('content', id, 'deletedtype', 'public')
 			functions.chData('content', id, 'deleteddate', formattedDate)
 			functions.msgAll(f"{title}. from \'{childfrom}\' just got put back Online from {deletedtype}\nhttps://www.youtube.com/watch?v={id}")
-			
+
 print("DEBUG: for statement done")
