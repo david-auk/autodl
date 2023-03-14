@@ -4,6 +4,7 @@ import urllib.parse
 import requests
 import secret
 import datetime
+import glob
 import os
 import re
 
@@ -84,7 +85,7 @@ def addContentData(title, childfrom, id, videopath, extention, deleted, deletedd
 		statement = f"INSERT INTO content VALUES (\"{mydb.converter.escape(title)}\", \"{mydb.converter.escape(childfrom)}\", \"{id}\", \"{mydb.converter.escape(videopath)}\", \"{extention}\", {deleted}, \"{deleteddate}\", \"{deletedtype}\", \"{requestuser}\", \"{uploaddate}\")"
 		addContentDataCursor.execute(statement)
 		mydb.commit()
-		#print(addContentDataCursor.rowcount, "record inserted.")
+		return addContentDataCursor.rowcount
 	except database.Error as e:
 		print(f"Error adding entry from {mydb.database}[{table}]: {e}")
 
@@ -319,6 +320,17 @@ def getVidId(link):
 		video_id = params['v']
 	
 	return video_id
+
+# 
+def subDel(channelTitle, filename):
+	rootDownloadDir = secret.configuration['general']['backupDir']
+	matchingFiles = glob.glob(f"{rootDownloadDir}/{channelTitle}/{filename}.*.vtt")
+
+	if matchingFiles:
+		for vtt in matchingFiles:
+			vttPath = vtt[0]
+			os.remove(vttPath)
+			print(f"Removed: {vttPath}")
 
 # Function for checking if the vidId is still online
 def avalibilityCheck(vidId):
