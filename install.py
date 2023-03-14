@@ -74,6 +74,9 @@ myTables = {
 		'extention': {
 			'type': 'text'
 		},
+		'subtitles': {
+			'type': 'int(11)'
+		},
 		'deleted': {
 			'type': 'int(11)'
 		},

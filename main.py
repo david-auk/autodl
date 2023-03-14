@@ -116,13 +116,16 @@ for (channelTitle, id, priority) in functions.getData("account", "priority", ope
 					if entryExists is False:
 
 						# Adding new entry to 'content' table
-						rowsAdded = functions.addContentData(videoTitle,channelTitle,vidId,filename,videoExtention,0,'N/A','Public',requestuser,uploadDate)
+						rowsAdded = functions.addContentData(videoTitle,channelTitle,vidId,filename,videoExtention,0,0,'N/A','Public',requestuser,uploadDate)
 						totalRecordsAdded += rowsAdded
 			
 				else:
 
 					# Notify host downloading gives error
 					functions.msgHost(f"Downloading https://www.youtube.com/watch?v={vidId} from {channelTitle}\ngave ERROR: {failureType}")
+
+				if functions.subCheck(channelTitle, filename, videoExtention):
+					functions.chData('content', vidId, 'subtitles', 1)
 
 print(f"{functions.coloursB['white']}{totalRecordsAdded}{functions.colours['reset']} Records inserted.")
 if totalRecordsSkipped:

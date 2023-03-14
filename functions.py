@@ -4,6 +4,7 @@ import urllib.parse
 import requests
 import secret
 import datetime
+import subprocess
 import os
 import re
 
@@ -77,11 +78,11 @@ def addChatIdData(name, id, priority, authenticated):
 		print(f"Error adding entry from {mydb.database}[{table}]: {e}")
 
 # Function for adding instances to the content table
-def addContentData(title, childfrom, id, videopath, extention, deleted, deleteddate, deletedtype, requestuser, uploaddate):
+def addContentData(title, childfrom, id, videopath, extention, subtitles, deleted, deleteddate, deletedtype, requestuser, uploaddate):
 	addContentDataCursor = mydb.cursor(buffered=True)
 	try:
 		table = 'content'
-		statement = f"INSERT INTO content VALUES (\"{mydb.converter.escape(title)}\", \"{mydb.converter.escape(childfrom)}\", \"{id}\", \"{mydb.converter.escape(videopath)}\", \"{extention}\", {deleted}, \"{deleteddate}\", \"{deletedtype}\", \"{requestuser}\", \"{uploaddate}\")"
+		statement = f"INSERT INTO content VALUES (\"{mydb.converter.escape(title)}\", \"{mydb.converter.escape(childfrom)}\", \"{id}\", \"{mydb.converter.escape(videopath)}\", \"{extention}\", {subtitles}, {deleted}, \"{deleteddate}\", \"{deletedtype}\", \"{requestuser}\", \"{uploaddate}\")"
 		addContentDataCursor.execute(statement)
 		mydb.commit()
 		return addContentDataCursor.rowcount
@@ -271,7 +272,7 @@ def getFacts(vidId, channelTitle, filename):
 		'subtitleslangs': ['all', '-live_chat'],
 		'writesubtitles': True,
 		'embedsubtitles': True,
-		'format': 'bestvideo+bestaudio/bestvideo+bestaudio',
+		'format': 'bestvideo+bestaudio[ext=m4a]/bestvideo+bestaudio',
 		'quiet': True
 	}
 
@@ -321,6 +322,22 @@ def getVidId(link):
 		video_id = params['v']
 	
 	return video_id
+
+# 
+def subCheck(channelTitle, filename, ext):
+	rootDownloadDir = secret.configuration['general']['backupDir']
+	filename = f"{rootDownloadDir}/{channelTitle}/{filename}.{ext}"
+
+	# Run ffprobe command to get information about the video file
+	ffprobe_output = subprocess.check_output(["ffprobe", "-v", "error", "-show_entries", "stream=codec_type", "-of", "default=noprint_wrappers=1:nokey=1", filename])
+
+	has_subtitles = False
+	for stream in ffprobe_output.decode().split("\n"):
+		if stream.strip() == "subtitle":
+			has_subtitles = True
+			break
+
+	return has_subtitles
 
 # Function for checking if the vidId is still online
 def avalibilityCheck(vidId):
