@@ -38,8 +38,7 @@ else:
 
 
 
-myCursorChannelRequest = functions.getData("account", "priority", operator, requiredPriority)
-for (channelTitle, id, priority) in myCursorChannelRequest:
+for (channelTitle, id, priority) in functions.getData("account", "priority", operator, requiredPriority):
 
 	# Creating the prompt with corosponding colour
 	print(f"{functions.colourPriority(priority)}•{functions.colours['reset']} {functions.coloursB['white']}{channelTitle}:{functions.colours['reset']}")
@@ -51,7 +50,12 @@ for (channelTitle, id, priority) in myCursorChannelRequest:
 		vidId = video['videoId']
 		videoTitle = video['title']['runs'][0]['text']
 		print(videoTitle)
-		entryExists = functions.getDataContentCheck('content', vidId)
+
+		# Checking if the entry exists in database
+		entryExists = False
+		for x in functions.getData('content', 'id', '=', vidId):
+			entryExists = True
+
 		if entryExists:
 
 			# Printing 'Succes' status for if the entry exists
@@ -67,7 +71,7 @@ for (channelTitle, id, priority) in myCursorChannelRequest:
 
 			# Skipping if video is in premiere
 			if isInPremiere:
-				print(f"[{functions.coloursB['yellow']}?{functions.colours['reset']}] https://www.youtube.com/watch?v={vidId}\nVideo in premiere, skipping\n")
+				print(f"[{functions.coloursB['yellow']}?{functions.colours['reset']}] https://www.youtube.com/watch?v={vidId}\n")
 				totalRecordsSkipped += 1
 				continue
 
@@ -95,7 +99,7 @@ for (channelTitle, id, priority) in myCursorChannelRequest:
 				functions.downloadThumbnail(vidId, channelTitle, filename, vidInfo['thumbnail'])
 				print('') # Newline
 
-				# Downloading the video's thumbnail
+				# Downloading the video's description
 				functions.writeDescription(channelTitle, filename, vidInfo['description'])
 				print('') # Newline
 
@@ -104,9 +108,16 @@ for (channelTitle, id, priority) in myCursorChannelRequest:
 				print('') # Newline
 				if success:
 
-					# Adding new entry to 'content' table
-					functions.addContentData(videoTitle,channelTitle,vidId,filename,videoExtention,0,'N/A','Public',requestuser,uploadDate)
-					totalRecordsAdded += functions.addContentDataCursor.rowcount
+					# Checking if the video got added to the database while downloading
+					entryExists = False
+					for x in functions.getData('content', 'id', '=', vidId):
+						entryExists = True
+
+					if entryExists:
+
+						# Adding new entry to 'content' table
+						functions.addContentData(videoTitle,channelTitle,vidId,filename,videoExtention,0,'N/A','Public',requestuser,uploadDate)
+						totalRecordsAdded += functions.addContentDataCursor.rowcount
 			
 				else:
 

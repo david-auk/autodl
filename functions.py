@@ -52,19 +52,9 @@ mydb = database.connect(
 	database=secret.mariadb['connection']['database']
 )
 
-# Defining diffirent cursors for diffirent subtasks in functions
-chDataCursor = mydb.cursor(buffered=True)
-delDataCursor = mydb.cursor(buffered=True)
-getDataCursor = mydb.cursor(buffered=True)
-countDataCursor = mydb.cursor(buffered=True)
-addChatIdDataCursor = mydb.cursor(buffered=True)
-addContentDataCursor = mydb.cursor(buffered=True)
-addAccountDataCursor = mydb.cursor(buffered=True)
-getDataContentCheckCursor = mydb.cursor(buffered=True)
-addDeletedContentDataCursor = mydb.cursor(buffered=True)
-
 # Function for adding instances to the account table
 def addAccountData(title, channelid, priority):
+	addAccountDataCursor = mydb.cursor(buffered=True)
 	try:
 		table = 'account'
 		statement = "INSERT INTO account VALUES (\"{}\", \"{}\", \"{}\")".format(title,channelid,priority)
@@ -76,6 +66,7 @@ def addAccountData(title, channelid, priority):
 
 # Function for adding instances to the content table
 def addChatIdData(name, id, priority, authenticated):
+	addChatIdDataCursor = mydb.cursor(buffered=True)
 	try:
 		table = 'chatid'
 		statement = f"INSERT INTO {table} VALUES (\"{mydb.converter.escape(name)}\", \"{id}\", \"{priority}\", \"{authenticated}\")"
@@ -87,6 +78,7 @@ def addChatIdData(name, id, priority, authenticated):
 
 # Function for adding instances to the content table
 def addContentData(title, childfrom, id, videopath, extention, deleted, deleteddate, deletedtype, requestuser, uploaddate):
+	addContentDataCursor = mydb.cursor(buffered=True)
 	try:
 		table = 'content'
 		statement = f"INSERT INTO content VALUES (\"{mydb.converter.escape(title)}\", \"{mydb.converter.escape(childfrom)}\", \"{id}\", \"{mydb.converter.escape(videopath)}\", \"{extention}\", {deleted}, \"{deleteddate}\", \"{deletedtype}\", \"{requestuser}\", \"{uploaddate}\")"
@@ -98,6 +90,7 @@ def addContentData(title, childfrom, id, videopath, extention, deleted, deletedd
 
 # Function for deleting rows in any table using the id variable
 def delData(table, instanceid):
+	delDataCursor = mydb.cursor(buffered=True)
 	try:
 		statement = "DELETE FROM " + table + " WHERE id=\'{}\'".format(instanceid)
 		delDataCursor.execute(statement)
@@ -109,6 +102,7 @@ def delData(table, instanceid):
 
 # Function for searching DB
 def getData(table, column, operator, instanceid):
+	getDataCursor = mydb.cursor(buffered=True)
 	try:
 		if instanceid == "ALL":
 			statement = "SELECT * FROM " + table
@@ -119,23 +113,9 @@ def getData(table, column, operator, instanceid):
 	except database.Error as e:
 		print(f"Error retrieving entry from {mydb.database}[{table}]: {e}")
 
-# Function for checking if entry exists
-def getDataContentCheck(table, instanceid):
-	try:
-		column = 'id'
-		statement = "SELECT * FROM " + table + " WHERE {}=\"{}\"".format(column,instanceid)
-		getDataContentCheckCursor.execute(statement)
-		entryExists = False
-		for x in getDataContentCheckCursor:
-			entryExists = True
-
-		return entryExists
-
-	except database.Error as e:
-		print(f"Error retrieving entry from {mydb.database}[{table}]: {e}")
-
 # Function for changing data of a table
 def chData(table, id, column, newData):
+	chDataCursor = mydb.cursor(buffered=True)
 	try:
 		statement = "UPDATE " + table + " SET {}=\"{}\" WHERE id=\"{}\"".format(column,newData,id)
 		chDataCursor.execute(statement)
@@ -145,6 +125,7 @@ def chData(table, id, column, newData):
 
 # Function for counting data of a table
 def countData(table, column, arg):
+	countDataCursor = mydb.cursor(buffered=True)
 	if arg == 'ALL':
 		statement = f'SELECT COUNT(ALL {column}) FROM {table}'
 	else:
@@ -157,7 +138,7 @@ def countData(table, column, arg):
 def msgHost(query):
 	telegramToken = secret.telegram['credentials']['token']
 	formatedQuote = urllib.parse.quote(query)
-	for x in getData("chatid", 'priority', '1'):
+	for x in getData("chatid", 'priority', '=', '1'):
 		hostChatId = x[1]
 	requests.get(f"https://api.telegram.org/bot{telegramToken}/sendMessage?chat_id={hostChatId}&text={formatedQuote}")
 
@@ -288,7 +269,7 @@ def getFacts(vidId, channelTitle, filename):
 		'subtitleslangs': ['all', '-live_chat'],
 		'writesubtitles': True,
 		'embedsubtitles': True,
-		'format': 'bestvideo+bestaudio[ext=m4a]/bestvideo+bestaudio',
+		'format': 'bestvideo+bestaudio/bestvideo+bestaudio',
 		'quiet': True
 	}
 

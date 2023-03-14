@@ -46,9 +46,6 @@ for (title, childfrom, id, videopath, extention, deleted, deleteddate, deletedty
 					else:
 						if avalibilityType == 'Striked':
 							functions.msgAll(f"{title} from \'{childfrom}\' just got Striked by \'{striker}\'")
-			print("DEBUG: away from if")
-			deleted = ''
-		print("DEBUG: away from if 2")
 
 	# If the content is avalible
 	else:
