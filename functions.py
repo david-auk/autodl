@@ -4,7 +4,6 @@ import urllib.parse
 import requests
 import secret
 import datetime
-import glob
 import os
 import re
 
@@ -158,8 +157,10 @@ def downloadVid(vidId, channelTitle, filename):
 		'outtmpl': f'{rootDownloadDir}/{channelTitle}/{filename}',
 		'subtitleslangs': ['all', '-live_chat'],
 		'writesubtitles': True,
-		'embedsubtitles': True,
-		'format': 'bestvideo+bestaudio[ext=m4a]/bestvideo+bestaudio'
+		'format': 'bestvideo+bestaudio[ext=m4a]/bestvideo+bestaudio',
+		'postprocessors': [{
+			'key': 'FFmpegEmbedSubtitle'
+		}]
 	}
 	success = False
 	tries = 0
@@ -195,7 +196,7 @@ def downloadThumbnail(vidId, channelTitle, filename, secondLink):
 	tries = 0
 	while not success:
 		try:
-			if tries == 5:
+			if tries == 3:
 				break 
 			urllib.request.urlretrieve(url, filename)	# Downloading the url
 			print(f"{coloursB['green']}√{colours['reset']} MAX quality thumbnail")
@@ -320,17 +321,6 @@ def getVidId(link):
 		video_id = params['v']
 	
 	return video_id
-
-# 
-def subDel(channelTitle, filename):
-	rootDownloadDir = secret.configuration['general']['backupDir']
-	matchingFiles = glob.glob(f"{rootDownloadDir}/{channelTitle}/{filename}.*.vtt")
-
-	if matchingFiles:
-		for vtt in matchingFiles:
-			vttPath = vtt[0]
-			os.remove(vttPath)
-			print(f"Removed: {vttPath}")
 
 # Function for checking if the vidId is still online
 def avalibilityCheck(vidId):

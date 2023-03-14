@@ -123,9 +123,6 @@ for (channelTitle, id, priority) in functions.getData("account", "priority", ope
 
 					# Notify host downloading gives error
 					functions.msgHost(f"Downloading https://www.youtube.com/watch?v={vidId} from {channelTitle}\ngave ERROR: {failureType}")
-				
-				# Removing resisting subtitles (originals are embedded)
-				functions.subDel(channelTitle, filename)
 
 print(f"{functions.coloursB['white']}{totalRecordsAdded}{functions.colours['reset']} Records inserted.")
 if totalRecordsSkipped:
