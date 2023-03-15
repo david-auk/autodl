@@ -13,7 +13,7 @@ for x in totalRows:
 	totalRows = x[0]
 
 currentRequestNum = 0
-for (title, childfrom, id, videopath, extention, deleted, deleteddate, deletedtype, requestuser, uploaddate) in functions.getData('content', 'id', '=', 'ALL'):
+for (title, childfrom, id, videopath, extention, subtitles, deleted, deleteddate, deletedtype, requestuser, uploaddate) in functions.getData('content', 'id', '=', 'ALL'):
 	isAvalible, avalibilityType, striker = functions.avalibilityCheck(id)
 
 	currentRequestNum += 1

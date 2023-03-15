@@ -73,7 +73,6 @@ def addChatIdData(name, id, priority, authenticated):
 		statement = f"INSERT INTO {table} VALUES (\"{mydb.converter.escape(name)}\", \"{id}\", \"{priority}\", \"{authenticated}\")"
 		addChatIdDataCursor.execute(statement)
 		mydb.commit()
-		print(addChatIdDataCursor.rowcount, "record inserted.")
 	except database.Error as e:
 		print(f"Error adding entry from {mydb.database}[{table}]: {e}")
 
@@ -118,7 +117,7 @@ def getData(table, column, operator, instanceid):
 def chData(table, id, column, newData):
 	chDataCursor = mydb.cursor(buffered=True)
 	try:
-		statement = "UPDATE " + table + " SET {}=\"{}\" WHERE id=\"{}\"".format(column,newData,id)
+		statement = "UPDATE " + table + " SET {}=\"{}\" WHERE id=\"{}\"".format(column,mydb.converter.escape(newData),id)
 		chDataCursor.execute(statement)
 		mydb.commit()
 	except database.Error as e:

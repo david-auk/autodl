@@ -101,7 +101,7 @@ myTables = {
 			'type': 'char(25)'
 		},
 		'priority': {
-			'type': 'int(11)'
+			'type': 'char(5)'
 		},
 		'authenticated': {
 			'type': 'char(5)'
