@@ -5,8 +5,7 @@ from telegram.ext import Updater, CommandHandler, CallbackQueryHandler, Callback
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
 # Enable logging
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-					 level=logging.INFO)
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Define password variable
@@ -33,11 +32,7 @@ def start(update, context):
 
 def help(update, context):
 	"""Send a message when the command /help is issued."""
-	update.message.reply_text('The following commands are available:\n'
-							  '/help - Show list of useful commands\n'
-							  '/passwd - Check password\n'
-							  '/latest - Ask for the latest data\n'
-							  '/info - Get info about a link')
+	update.message.reply_text('The following commands are available:\n/help - Show list of useful commands\n/passwd - Check password\n/latest - Ask for the latest data\n/info - Get info about a link')
 
 def is_allowed_user(update, context):
 	"""Check if the current user ID is allowed."""
@@ -45,7 +40,6 @@ def is_allowed_user(update, context):
 	chat_id = update.message.from_user.id
 
 	# Check if the user ID is in the AllowedUserID variable
-
 	userIsAllowed = False
 	for (name, id, priority, authenticated) in functions.getData('chatid', 'id', '=', chat_id):
 		if authenticated == '1':
@@ -55,7 +49,6 @@ def is_allowed_user(update, context):
 		return True
 	else:
 		return False
-
 
 def check_password(update, context):
 	"""Check the user's password."""
@@ -81,15 +74,12 @@ def ask_latest(update, context):
 		context.bot.send_message(chat_id=update.message.chat_id, text="Sorry, you are not authorized to use this bot.")
 		return
 
-	keyboard = [[InlineKeyboardButton("10", callback_data='10'),
-				 InlineKeyboardButton("20", callback_data='20'),
-				 InlineKeyboardButton("30", callback_data='30')],
-				[InlineKeyboardButton("Today", callback_data='today'),
-				 InlineKeyboardButton("Yesterday", callback_data='yesterday')]]
+	keyboard = [[InlineKeyboardButton("10", callback_data='10'),InlineKeyboardButton("20", callback_data='20'),InlineKeyboardButton("30", callback_data='30')],[InlineKeyboardButton("Today", callback_data='today'),InlineKeyboardButton("Yesterday", callback_data='yesterday')]]
 
 	reply_markup = InlineKeyboardMarkup(keyboard)
 
 	update.message.reply_text('Please choose an option:', reply_markup=reply_markup)
+
 
 def button_latest(update, context):
 	"""Handle the button press."""
@@ -109,6 +99,7 @@ def button_latest(update, context):
 		
 	query.edit_message_text(text=f"{text}")
 
+
 def get_info(update, context):
 	"""Listen for user input and do an if statement."""
 
@@ -125,6 +116,7 @@ def get_info(update, context):
 		update.message.reply_text('This is an example link.')
 	else:
 		update.message.reply_text('Sorry, I do not recognize this link.')
+
 
 def link(update, context):
 	"""Handle links sent by the user."""
@@ -168,20 +160,27 @@ def link(update, context):
 		if is_allowed_user(update, context) is False:
 			context.bot.send_message(chat_id=update.message.chat_id, text="Sorry, you are not authorized to use this bot.")
 			return
-		
+
+#		print(message_text[20:28])
+
 		if message_text[:7] == 'http://' or message_text[:8] == 'https://':
-			context.bot.send_message(chat_id=chat_id, text="Thanks for the link!")
+			if message_text[24:32] == 'watch?v=' or message_text[23:31] == 'watch?v=' or message_text[20:28] == 'watch?v=' or message_text[8:16] == 'youtu.be':
+				vidId = functions.getVidId(message_text)
+				context.bot.send_message(chat_id=chat_id, text=f"Thanks for the link, the vidID is: \'{vidId}\'")
+			else:
+				context.bot.send_message(chat_id=chat_id, text=f"Thanks for the link, this is not a youtube video link")
 		else:
 			context.bot.send_message(chat_id=chat_id, text="Sorry, that's not a valid link.")
 
 	context.user_data["next_handler"] = ""
 
-def echo(update, context):
+
+def error(update, context):
 	"""Echo the user message."""
-	update.message.reply_text(update.message.text)
+	update.message.reply_text(f"Unknown command: {update.message.text}")
+
 
 def main():
-	"""Start the bot."""
 	# Set up the Telegram bot
 	updater = Updater(secret.telegram['credentials']['token'], use_context=True)
 
@@ -196,8 +195,7 @@ def main():
 	dp.add_handler(CallbackQueryHandler(button_latest))
 	dp.add_handler(CommandHandler("info", get_info))
 	dp.add_handler(MessageHandler(Filters.text & (~Filters.command), link))
-	dp.add_handler(MessageHandler(Filters.text & Filters.command, echo))
-
+	dp.add_handler(MessageHandler(Filters.text & Filters.command, error))
 
 	# Start the bot
 	updater.start_polling()
