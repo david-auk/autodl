@@ -101,13 +101,13 @@ def delData(table, instanceid):
 		print(f"Error deleting entry from {mydb.database}[{table}]: {e}")
 
 # Function for searching DB
-def getData(table, column, operator, instanceid):
+def getData(table, inputstatement):
 	getDataCursor = mydb.cursor(buffered=True)
 	try:
-		if instanceid == "ALL":
+		if inputstatement == "ALL":
 			statement = "SELECT * FROM " + table
 		else:
-			statement = "SELECT * FROM " + table + " WHERE {} {} \"{}\"".format(column,operator,instanceid)
+			statement = f"SELECT * FROM {table} {inputstatement}" # WHERE {column} {operator} \"{instanceid}\""
 		getDataCursor.execute(statement)
 		return getDataCursor
 	except database.Error as e:
@@ -124,12 +124,12 @@ def chData(table, id, column, newData):
 		print(f"Error manipulating data from {mydb.database}[{table}]: {e}")
 
 # Function for counting data of a table
-def countData(table, column, arg):
+def countData(table, inputstatement):
 	countDataCursor = mydb.cursor(buffered=True)
-	if arg == 'ALL':
-		statement = f'SELECT COUNT(ALL {column}) FROM {table}'
+	if inputstatement == 'ALL':
+		statement = f'SELECT COUNT(ALL id) FROM {table}'
 	else:
-		statement = f'SELECT COUNT(ALL {column}) FROM {table} WHERE {column}=\'{arg}\''
+		statement = f'SELECT COUNT(ALL {column}) FROM {table} {inputstatement}'
 
 	countDataCursor.execute(statement)
 	return countDataCursor
@@ -138,7 +138,7 @@ def countData(table, column, arg):
 def msgHost(query):
 	telegramToken = secret.telegram['credentials']['token']
 	formatedQuote = urllib.parse.quote(query)
-	for x in getData("chatid", 'priority', '=', '1'):
+	for x in getData("chatid", 'WHERE priority=\"1\"'):
 		hostChatId = x[1]
 	requests.get(f"https://api.telegram.org/bot{telegramToken}/sendMessage?chat_id={hostChatId}&text={formatedQuote}")
 
@@ -146,7 +146,7 @@ def msgHost(query):
 def msgAll(query):
 	telegramToken = secret.telegram['credentials']['token']
 	formatedQuote = urllib.parse.quote(query)
-	for x in getData("chatid", 'priority', '=', 'ALL'):
+	for x in getData("chatid", 'ALL'):
 		currentUserChatId = x[1]
 		requests.get(f"https://api.telegram.org/bot{telegramToken}/sendMessage?chat_id={currentUserChatId}&text={formatedQuote}")
 

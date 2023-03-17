@@ -8,12 +8,12 @@ originalTerminalWidth = shutil.get_terminal_size().columns
 currentDate = datetime.datetime.now()
 formattedDate = currentDate.strftime("%d-%m-%Y")
 
-totalRows = functions.countData("content", 'id', 'ALL')
+totalRows = functions.countData("content", 'ALL')
 for x in totalRows:
 	totalRows = x[0]
 
 currentRequestNum = 0
-for (title, childfrom, id, videopath, extention, subtitles, deleted, deleteddate, deletedtype, requestuser, uploaddate) in functions.getData('content', 'id', '=', 'ALL'):
+for (title, childfrom, id, videopath, extention, subtitles, deleted, deleteddate, deletedtype, requestuser, uploaddate) in functions.getData('content', 'ORDER BY deleted DESC'):
 	isAvalible, avalibilityType, striker = functions.avalibilityCheck(id)
 
 	currentRequestNum += 1

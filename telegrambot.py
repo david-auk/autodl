@@ -32,7 +32,11 @@ def start(update, context):
 
 def help(update, context):
 	"""Send a message when the command /help is issued."""
-	update.message.reply_text('The following commands are available:\n/help - Show list of useful commands\n/passwd - Check password\n/latest - Ask for the latest data\n/info - Get info about a link')
+	update.message.reply_text('The following commands are available:\n'
+							  '/help   - Show list of useful commands\n'
+							  '/passwd - Check password\n'
+							  '/latest - Ask for the latest data\n'
+							  '/info   - Get info about a link')
 
 def is_allowed_user(update, context):
 	"""Check if the current user ID is allowed."""

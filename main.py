@@ -27,18 +27,16 @@ if args.time:
 			requiredPriority = 2 # One, two
 		else:
 			requiredPriority = 1 # One
-	operator = '<'
 	print(f"\n{functions.coloursB['white']}Type pull:{functions.colours['reset']} {functions.colourPriority(requiredPriority)}•{functions.colours['reset']}\n")
-	requiredPriority += 1
+	
+	requiredPriority += 1 # Making the code above more human readable
+	statement = f"WHERE priority < {requiredPriority}"
 else:
-	requiredPriority = 'ALL'
-	operator = '='
+	statement = 'ALL'
 
 ## Flags end.
 
-
-
-for (channelTitle, id, priority) in functions.getData("account", "priority", operator, requiredPriority):
+for (channelTitle, id, priority) in functions.getData("account", statement):
 
 	# Creating the prompt with corosponding colour
 	print(f"{functions.colourPriority(priority)}•{functions.colours['reset']} {functions.coloursB['white']}{channelTitle}:{functions.colours['reset']}")
@@ -53,7 +51,7 @@ for (channelTitle, id, priority) in functions.getData("account", "priority", ope
 
 		# Checking if the entry exists in database
 		entryExists = False
-		for x in functions.getData('content', 'id', '=', vidId):
+		for x in functions.getData('content', f'WHERE id = \"{vidId}\"'):
 			entryExists = True
 
 		if entryExists:
@@ -110,7 +108,7 @@ for (channelTitle, id, priority) in functions.getData("account", "priority", ope
 
 					# Checking if the video got added to the database while downloading
 					entryExists = False
-					for x in functions.getData('content', 'id', '=', vidId):
+					for x in functions.getData('content', f'WHERE id=\"{vidId}\"'):
 						entryExists = True
 
 					if entryExists is False:
