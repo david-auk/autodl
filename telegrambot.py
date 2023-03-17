@@ -1,6 +1,7 @@
 import logging
 import functions
 import secret
+from datetime import datetime, timedelta
 from telegram.ext import Updater, CommandHandler, CallbackQueryHandler, CallbackContext, MessageHandler, Filters
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
@@ -22,7 +23,7 @@ def start(update, context):
 		name = user.first_name
 
 	userExists = False
-	for x in functions.getData('chatid', 'id', '=', chat_id):
+	for x in functions.getData('chatid', f'WHERE id=\"{chat_id}\"'):
 		userExists = True
 
 	if userExists:
@@ -45,7 +46,7 @@ def is_allowed_user(update, context):
 
 	# Check if the user ID is in the AllowedUserID variable
 	userIsAllowed = False
-	for (name, id, priority, authenticated) in functions.getData('chatid', 'id', '=', chat_id):
+	for (name, id, priority, authenticated) in functions.getData('chatid', f'WHERE id=\"{chat_id}\"'):
 		if authenticated == '1':
 			userIsAllowed = True
 
@@ -78,6 +79,31 @@ def ask_latest(update, context):
 		context.bot.send_message(chat_id=update.message.chat_id, text="Sorry, you are not authorized to use this bot.")
 		return
 
+	if update.message.text[8:]:
+		arg = update.message.text[8:]
+		if arg.isdigit():
+			table = f'(SELECT * FROM content ORDER BY nr DESC LIMIT {arg})'
+			statment = f'AS subquery ORDER BY nr ASC'
+			for x in functions.countData(table, statment):
+				totalRows = x[0]
+				maxLen = len(str(totalRows))
+				latestContent = ''
+
+			if totalRows:
+				totalRows += 1
+				for (title, childfrom, id, videopath, extention, subtitles, deleted, deleteddate, deletedtype, requestuser, uploaddate, nr) in functions.getData(table, statment):
+					totalRows -= 1
+					space = " " * (maxLen - len(str(totalRows)))
+					latestContent += f"{totalRows}.{space} {childfrom} | {title}\n"
+			else:
+				latestContent='No Data.'
+
+			context.bot.send_message(chat_id=update.message.chat.id, text=latestContent)
+
+		else:
+			context.bot.send_message(chat_id=update.message.chat.id, text='Give a number as argument or use the buttons.\n/latest')
+		return
+
 	keyboard = [[InlineKeyboardButton("10", callback_data='10'),InlineKeyboardButton("20", callback_data='20'),InlineKeyboardButton("30", callback_data='30')],[InlineKeyboardButton("Today", callback_data='today'),InlineKeyboardButton("Yesterday", callback_data='yesterday')]]
 
 	reply_markup = InlineKeyboardMarkup(keyboard)
@@ -87,22 +113,60 @@ def ask_latest(update, context):
 
 def button_latest(update, context):
 	"""Handle the button press."""
+	#chat_id = update.message.chat_id
 	query = update.callback_query
 	query.answer()
 
 	if query.data == '10':
-		text = 'You selected 10.'
-	elif query.data == '20':
-		text = 'You selected 20.'
-	elif query.data == '30':
-		text = 'You selected 30.'
-	elif query.data == 'today':
-		text = 'You selected today.'
-	elif query.data == 'yesterday':
-		text = 'You selected yesterday.'
-		
+		text = 'Latest records:'
+		table = f'(SELECT * FROM content ORDER BY nr DESC LIMIT 10)'
+		statment = f'AS subquery ORDER BY nr ASC'
+		# BC the final statment should look like 'SELECT * FROM (SELECT * FROM content ORDER BY nr DESC LIMIT {latestNum}) AS subquery ORDER BY nr ASC'
+		# But the getData func requires a table
+	else:
+		if query.data == '20':
+			text = 'Latest records:'
+			table = f'(SELECT * FROM content ORDER BY nr DESC LIMIT 20)'
+			statment = f'AS subquery ORDER BY nr ASC'
+			# BC the final statment should look like 'SELECT * FROM (SELECT * FROM content ORDER BY nr DESC LIMIT {latestNum}) AS subquery ORDER BY nr ASC'
+			# But the getData func requires a table
+		else:
+			if query.data == '30':
+				text = 'Latest records:'
+				table = f'(SELECT * FROM content ORDER BY nr DESC LIMIT 30)'
+				statment = f'AS subquery ORDER BY nr ASC'
+				# BC the final statment should look like 'SELECT * FROM (SELECT * FROM content ORDER BY nr DESC LIMIT {latestNum}) AS subquery ORDER BY nr ASC'
+				# But the getData func requires a table
+			else:
+				if query.data == 'today':
+					text = 'Today:'
+					today = datetime.now().strftime('%d-%m-%Y')
+					table = 'content'
+					statment = f'WHERE uploaddate=\"{today}\"'
+				else:
+					if query.data == 'yesterday':
+						text = 'Yesterday:'
+						yesterday = (datetime.now() - timedelta(days=1)).strftime('%d-%m-%Y')
+						table = 'content'
+						statment = f'WHERE uploaddate=\"{yesterday}\"'
+
 	query.edit_message_text(text=f"{text}")
 
+	for x in functions.countData(table, statment):
+		totalRows = x[0]
+		maxLen = len(str(totalRows))
+		latestContent = ''
+
+	if totalRows:
+		totalRows += 1
+		for (title, childfrom, id, videopath, extention, subtitles, deleted, deleteddate, deletedtype, requestuser, uploaddate, nr) in functions.getData(table, statment):
+			totalRows -= 1
+			space = " " * (maxLen - len(str(totalRows)))
+			latestContent += f"{totalRows}.{space} {childfrom} | {title}\n"
+	else:
+		latestContent='No Data.'
+
+	context.bot.send_message(chat_id=update.effective_chat.id, text=latestContent)
 
 def get_info(update, context):
 	"""Listen for user input and do an if statement."""
@@ -140,7 +204,7 @@ def link(update, context):
 
 			userExists = False
 			hasPriorityValue = False
-			for (name, id, priority, authenticated) in functions.getData('chatid', 'id', '=', chat_id):
+			for (name, id, priority, authenticated) in functions.getData('chatid', f'WHERE id=\"{chat_id}\"'):
 				userExists = True
 				if priority == 'N/A':
 					hasPriorityValue = True
@@ -181,6 +245,7 @@ def link(update, context):
 
 def error(update, context):
 	"""Echo the user message."""
+	print(context.args)
 	update.message.reply_text(f"Unknown command: {update.message.text}")
 
 

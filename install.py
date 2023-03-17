@@ -91,6 +91,9 @@ myTables = {
 		},
 		'uploaddate': {
 			'type': 'text'
+		},
+		'nr': {
+			'type': 'int'
 		}
 	},
 	'chatid': {

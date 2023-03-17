@@ -77,11 +77,11 @@ def addChatIdData(name, id, priority, authenticated):
 		print(f"Error adding entry from {mydb.database}[{table}]: {e}")
 
 # Function for adding instances to the content table
-def addContentData(title, childfrom, id, videopath, extention, subtitles, deleted, deleteddate, deletedtype, requestuser, uploaddate):
+def addContentData(title, childfrom, id, videopath, extention, subtitles, deleted, deleteddate, deletedtype, requestuser, uploaddate, nr):
 	addContentDataCursor = mydb.cursor(buffered=True)
 	try:
 		table = 'content'
-		statement = f"INSERT INTO content VALUES (\"{mydb.converter.escape(title)}\", \"{mydb.converter.escape(childfrom)}\", \"{id}\", \"{mydb.converter.escape(videopath)}\", \"{extention}\", {subtitles}, {deleted}, \"{deleteddate}\", \"{deletedtype}\", \"{requestuser}\", \"{uploaddate}\")"
+		statement = f"INSERT INTO {table} VALUES (\"{mydb.converter.escape(title)}\", \"{mydb.converter.escape(childfrom)}\", \"{id}\", \"{mydb.converter.escape(videopath)}\", \"{extention}\", {subtitles}, {deleted}, \"{deleteddate}\", \"{deletedtype}\", \"{requestuser}\", \"{uploaddate}\", {nr})"
 		addContentDataCursor.execute(statement)
 		mydb.commit()
 		return addContentDataCursor.rowcount
@@ -126,8 +126,9 @@ def chData(table, id, column, newData):
 # Function for counting data of a table
 def countData(table, inputstatement):
 	countDataCursor = mydb.cursor(buffered=True)
+	column = 'id'
 	if inputstatement == 'ALL':
-		statement = f'SELECT COUNT(ALL id) FROM {table}'
+		statement = f'SELECT COUNT(ALL {column}) FROM {table}'
 	else:
 		statement = f'SELECT COUNT(ALL {column}) FROM {table} {inputstatement}'
 
