@@ -293,7 +293,7 @@ def link(update, context):
 
 				for x in functions.getData('chatid', f'WHERE id={chat_id}'):
 					priority = x[2]
-					if priority != 0:
+					if priority != 1:
 						functions.msgHost(f"{requestuser} Just downloaded: https://youtube.com/watch?v={vidId}")
 						functions.msgHost(f"/remove {vidId}")
 			else:

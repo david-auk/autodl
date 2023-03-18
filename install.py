@@ -87,7 +87,7 @@ myTables = {
 			'type': 'text'
 		},
 		'requestuser': {
-			'type': 'varchar(11)'
+			'type': 'text'
 		},
 		'uploaddate': {
 			'type': 'text'
