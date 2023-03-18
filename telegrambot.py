@@ -82,24 +82,26 @@ def ask_latest(update, context):
 	if update.message.text[8:]:
 		arg = update.message.text[8:]
 		if arg.isdigit():
-			table = f'(SELECT * FROM content ORDER BY nr DESC LIMIT {arg})'
-			statment = f'AS subquery ORDER BY nr ASC'
-			for x in functions.countData(table, statment):
-				totalRows = x[0]
-				maxLen = len(str(totalRows))
-				latestContent = ''
+			if int(arg) < 69: # The max lines a messages can contain. Nice
+				table = f'(SELECT * FROM content ORDER BY nr DESC LIMIT {arg})'
+				statment = f'AS subquery ORDER BY nr ASC'
+				for x in functions.countData(table, statment):
+					totalRows = x[0]
+					maxLen = len(str(totalRows))
+					latestContent = ''
 
-			if totalRows:
-				totalRows += 1
-				for (title, childfrom, id, videopath, extention, subtitles, deleted, deleteddate, deletedtype, requestuser, uploaddate, nr) in functions.getData(table, statment):
-					totalRows -= 1
-					space = " " * (maxLen - len(str(totalRows)))
-					latestContent += f"{totalRows}.{space} {childfrom} | {title}\n"
+				if totalRows:
+					totalRows += 1
+					for (title, childfrom, id, videopath, extention, subtitles, deleted, deleteddate, deletedtype, requestuser, uploaddate, nr) in functions.getData(table, statment):
+						totalRows -= 1
+						space = " " * (maxLen - len(str(totalRows)))
+						latestContent += f"{totalRows}.{space} {childfrom} | {title}\n"
+				else:
+					latestContent='No Data.'
+
+				context.bot.send_message(chat_id=update.message.chat.id, text=latestContent)
 			else:
-				latestContent='No Data.'
-
-			context.bot.send_message(chat_id=update.message.chat.id, text=latestContent)
-
+				context.bot.send_message(chat_id=update.message.chat.id, text='Requested over MAX lines')
 		else:
 			context.bot.send_message(chat_id=update.message.chat.id, text='Give a number as argument or use the buttons.\n/latest')
 		return
@@ -216,7 +218,7 @@ def link(update, context):
 			else:
 				functions.addChatIdData(name, chat_id, '3', '1')
 
-			functions.msgHost(f"The user {name} just got added to the Datebase")
+			functions.msgHost(f"The user {name} just got added to the Database")
 
 		else:
 			context.bot.send_message(chat_id=chat_id, text="Sorry, that's not the correct password.")
@@ -229,12 +231,71 @@ def link(update, context):
 			context.bot.send_message(chat_id=update.message.chat_id, text="Sorry, you are not authorized to use this bot.")
 			return
 
-#		print(message_text[20:28])
-
 		if message_text[:7] == 'http://' or message_text[:8] == 'https://':
 			if message_text[24:32] == 'watch?v=' or message_text[23:31] == 'watch?v=' or message_text[20:28] == 'watch?v=' or message_text[8:16] == 'youtu.be':
 				vidId = functions.getVidId(message_text)
-				context.bot.send_message(chat_id=chat_id, text=f"Thanks for the link, the vidID is: \'{vidId}\'")
+				
+
+				# Checking if the video got added to the database while downloading
+				entryExists = False
+				for x in functions.getData('content', f'WHERE id=\"{vidId}\"'):
+					entryExists = True
+
+				if entryExists:
+					context.bot.send_message(chat_id=chat_id, text=f"Already downloaded video: \'{vidId}\' ✅")
+					return
+
+				message = context.bot.send_message(chat_id=chat_id, text=f"Getting facts for: \'{vidId}\'")
+				message_id = update.message.message_id
+
+				succes, info, uploadDate = functions.getFacts(vidId)
+				if succes:
+					videoTitle = info['title']
+					videoExtention = info['ext']
+					channelTitle = functions.accNameFriendly(info['uploader'])
+					filename = functions.filenameFriendly(videoTitle)
+
+					context.bot.edit_message_text(chat_id=chat_id, message_id=message.message_id, text=f"Getting facts for: \'{vidId}\'\n\nFacts retreved. ☑️")
+				else:
+					context.bot.edit_message_text(chat_id=chat_id, message_id=message.message_id, text=f"Getting facts for: \'{vidId}\'\n\nFacts retreved. ❌\n\nCheck your link")	
+					return				
+			
+				succes = functions.downloadThumbnail(vidId, channelTitle, filename, info['thumbnail'])
+				if succes:
+					context.bot.edit_message_text(chat_id=chat_id, message_id=message.message_id, text=f"Getting facts for: \'{vidId}\'\n\nFacts retreved. ☑️\n\nDownloaded thumbnail. ☑️")	
+				else:
+					context.bot.edit_message_text(chat_id=chat_id, message_id=message.message_id, text=f"Getting facts for: \'{vidId}\'\n\nFacts retreved. ☑️\n\nDownloaded thumbnail. ❌\n\nSomething weird is going on, Host contacted")
+					return
+
+				succes = functions.writeDescription(channelTitle, filename, info['description'])
+				if succes:
+					context.bot.edit_message_text(chat_id=chat_id, message_id=message.message_id, text=f"Getting facts for: \'{vidId}\'\n\nFacts retreved. ☑️\n\nDownloaded thumbnail. ☑️\n\nWriten description. ☑️\n\nDownloading video.")	
+				else:
+					context.bot.edit_message_text(chat_id=chat_id, message_id=message.message_id, text=f"Getting facts for: \'{vidId}\'\n\nFacts retreved. ☑️\n\nDownloaded thumbnail. ☑️\n\nWriten description. ❌\n\nPermission issue, Please contact host")
+					return
+
+				success, failureType = functions.downloadVid(vidId, channelTitle, filename)
+				if succes is False:
+					context.bot.edit_message_text(chat_id=chat_id, message_id=message.message_id, text=f"Getting facts for: \'{vidId}\'\n\nFacts retreved. ☑️\n\nDownloaded thumbnail. ☑️\n\nWriten description. ☑️\n\nDownloaded video. ❌ ERROR-type: {failureType}\nHost contacted.")
+					return
+
+				for x in functions.getData('chatid', f'WHERE id={chat_id}'):
+					requestuser = x[0]
+
+				for x in functions.countData("content", 'ALL'):
+					currentNum = x[0] + 1
+
+				functions.addContentData(videoTitle,channelTitle,vidId,filename,videoExtention,0,0,'N/A','Public',requestuser,uploadDate,currentNum)
+				context.bot.edit_message_text(chat_id=chat_id, message_id=message.message_id, text=f"Downloaded: \'{vidId}\' ✅")
+
+				if functions.subCheck(channelTitle, filename, videoExtention):
+					functions.chData('content', vidId, 'subtitles', 1)
+
+				for x in functions.getData('chatid', f'WHERE id={chat_id}'):
+					priority = x[2]
+					if priority != 0:
+						functions.msgHost(f"{requestuser} Just downloaded: https://youtube.com/watch?v={vidId}")
+						functions.msgHost(f"/remove {vidId}")
 			else:
 				context.bot.send_message(chat_id=chat_id, text=f"Thanks for the link, this is not a youtube video link")
 		else:
@@ -245,7 +306,6 @@ def link(update, context):
 
 def error(update, context):
 	"""Echo the user message."""
-	print(context.args)
 	update.message.reply_text(f"Unknown command: {update.message.text}")
 
 

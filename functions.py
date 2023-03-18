@@ -194,6 +194,7 @@ def downloadThumbnail(vidId, channelTitle, filename, secondLink):
 	filename = f'{destinationDir}/{filename}.jpg'
 
 	success = False
+
 	tries = 0
 	while not success:
 		try:
@@ -240,9 +241,13 @@ def writeDescription(channelTitle, filename, description):
 
 	filename = f'{destinationDir}/{filename}.txt'
 
+	succes = False
 	with open(filename, 'w') as f:
 		f.write(str(description))
 		print(f"{coloursB['green']}√{colours['reset']} description written")
+		succes = True
+
+	return succes
 
 # Function for converting non filename friendly srt to filename friendly
 def filenameFriendly(srtValue):
@@ -264,11 +269,23 @@ def filenameFriendly(srtValue):
 	
 	return filename
 
+def accNameFriendly(srtValue):
+    # Split the input string into a list of words
+    srtValue = srtValue.lower()
+    words = srtValue.split()
+
+    # Capitalize the first letter of each word and join them together
+    modifiedWords = [word.capitalize() for word in words]
+    modifiedString = ''.join(modifiedWords)
+
+    return modifiedString
+
+
 # Function for saving facts of a video to a dictionary
-def getFacts(vidId, channelTitle, filename):
+def getFacts(vidId):
 	rootDownloadDir = secret.configuration['general']['backupDir']
 	ydl_opts = {
-		'outtmpl': f'{rootDownloadDir}/{channelTitle}/{filename}',
+		'outtmpl': f'{rootDownloadDir}/accountdir/filename',
 		'subtitleslangs': ['all', '-live_chat'],
 		'writesubtitles': True,
 		'embedsubtitles': True,
@@ -288,7 +305,7 @@ def getFacts(vidId, channelTitle, filename):
 		except Exception as e:
 			tries += 1
 			ydl_opts = {
-				'outtmpl': f'{rootDownloadDir}/{channelTitle}/{filename}',
+				'outtmpl': f'{rootDownloadDir}/{channelTitle}/filename',
 				'subtitleslangs': ['all', '-live_chat'],
 				'writesubtitles': True,
 				'embedsubtitles': True,

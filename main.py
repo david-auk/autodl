@@ -80,7 +80,7 @@ for (channelTitle, id, priority) in functions.getData("account", statement):
 			filename = functions.filenameFriendly(videoTitle)
 
 			# Gather facts
-			success, vidInfo, uploadDate = functions.getFacts(vidId, channelTitle, filename)
+			success, vidInfo, uploadDate = functions.getFacts(vidId)
 
 			if success is False:
 				print(f"[{functions.coloursB['yellow']}Skipping{functions.colours['reset']}]\n")
