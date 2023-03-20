@@ -85,10 +85,9 @@ def ask_latest(update, context):
 			if int(arg) < 69: # The max lines a messages can contain. Nice
 				table = f'(SELECT * FROM content ORDER BY nr DESC LIMIT {arg})'
 				statment = f'AS subquery ORDER BY nr ASC'
-				for x in functions.countData(table, statment):
-					totalRows = x[0]
-					maxLen = len(str(totalRows))
-					latestContent = ''
+				totalRows = functions.countData(table, statment):
+				maxLen = len(str(totalRows))
+				latestContent = ''
 
 				if totalRows:
 					totalRows += 1
@@ -154,10 +153,9 @@ def button_latest(update, context):
 
 	query.edit_message_text(text=f"{text}")
 
-	for x in functions.countData(table, statment):
-		totalRows = x[0]
-		maxLen = len(str(totalRows))
-		latestContent = ''
+	totalRows = functions.countData(table, statment):
+	maxLen = len(str(totalRows))
+	latestContent = ''
 
 	if totalRows:
 		totalRows += 1
