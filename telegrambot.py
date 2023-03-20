@@ -92,7 +92,7 @@ def ask_latest(update, context):
 
 				if totalRows:
 					totalRows += 1
-					for (title, childfrom, id, videopath, extention, subtitles, deleted, deleteddate, deletedtype, requestuser, uploaddate, nr) in functions.getData(table, statment):
+					for (title, childfrom, id, nr, videopath, extention, subtitles, deleted, deleteddate, deletedtype, requestuser, uploaddate) in functions.getData(table, statment):
 						totalRows -= 1
 						space = " " * (maxLen - len(str(totalRows)))
 						latestContent += f"{totalRows}.{space} {childfrom} | {title}\n"
@@ -161,7 +161,7 @@ def button_latest(update, context):
 
 	if totalRows:
 		totalRows += 1
-		for (title, childfrom, id, videopath, extention, subtitles, deleted, deleteddate, deletedtype, requestuser, uploaddate, nr) in functions.getData(table, statment):
+		for (title, childfrom, id, nr, videopath, extention, subtitles, deleted, deleteddate, deletedtype, requestuser, uploaddate) in functions.getData(table, statment):
 			totalRows -= 1
 			space = " " * (maxLen - len(str(totalRows)))
 			latestContent += f"{totalRows}.{space} {childfrom} | {title}\n"

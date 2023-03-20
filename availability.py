@@ -9,11 +9,9 @@ currentDate = datetime.datetime.now()
 formattedDate = currentDate.strftime("%d-%m-%Y")
 
 totalRows = functions.countData("content", 'ALL')
-for x in totalRows:
-	totalRows = x[0]
 
 currentRequestNum = 0
-for (title, childfrom, id, videopath, extention, subtitles, deleted, deleteddate, deletedtype, requestuser, uploaddate, nr) in functions.getData('content', 'ORDER BY deleted DESC'):
+for (title, childfrom, id, nr, videopath, extention, subtitles, deleted, deleteddate, deletedtype, requestuser, uploaddate) in functions.getData('content', 'ORDER BY deleted DESC'):
 	isAvalible, avalibilityType, striker = functions.avalibilityCheck(id)
 
 	currentRequestNum += 1
@@ -30,7 +28,7 @@ for (title, childfrom, id, videopath, extention, subtitles, deleted, deleteddate
 			if avalibilityType == 'Unlisted' or avalibilityType == 'Striked':
 				print(f"{functions.coloursB['yellow']}{avalibilityType.upper()}{functions.colours['reset']} - {id} | {childfrom} | {title}")	
 
-		if deleted == 0: # He just got deleted
+		if deleted == 0: # Video status just got deleted
 			print(f'  ^ The first time detecting this as {avalibilityType}\n')
 			functions.chData('content', id, 'deleted', 1)
 			functions.chData('content', id, 'deletedtype', avalibilityType)
@@ -49,12 +47,10 @@ for (title, childfrom, id, videopath, extention, subtitles, deleted, deleteddate
 
 	# If the content is avalible
 	else:
-		if deleted == 1: # He just got back online
+		if deleted == 1: # Video status just got back online
 			print(f"{functions.coloursB['green']}{avalibilityType.upper()}{functions.colours['reset']} - {id} | {childfrom} | {title}")
 			print(f'  ^ The first time detecting this as {avalibilityType} (Again)\n')
 			functions.chData('content', id, 'deleted', 0)
 			functions.chData('content', id, 'deletedtype', 'public')
 			functions.chData('content', id, 'deleteddate', formattedDate)
 			functions.msgAll(f"{title}. from \'{childfrom}\' just got put back Online from {deletedtype}\nhttps://www.youtube.com/watch?v={id}")
-
-print("DEBUG: for statement done")

@@ -77,7 +77,7 @@ def addChatIdData(name, id, priority, authenticated):
 		print(f"Error adding entry from {mydb.database}[{table}]: {e}")
 
 # Function for adding instances to the content table
-def addContentData(title, childfrom, id, videopath, extention, subtitles, deleted, deleteddate, deletedtype, requestuser, uploaddate, nr):
+def addContentData(title, childfrom, id, nr, videopath, extention, subtitles, deleted, deleteddate, deletedtype, requestuser, uploaddate):
 	addContentDataCursor = mydb.cursor(buffered=True)
 	try:
 		table = 'content'
@@ -133,7 +133,9 @@ def countData(table, inputstatement):
 		statement = f'SELECT COUNT(ALL {column}) FROM {table} {inputstatement}'
 
 	countDataCursor.execute(statement)
-	return countDataCursor
+	for x in countDataCursor:
+		count = x[0]
+	return count
 
 # Function that messages the 'Host' using credentials from secret.py
 def msgHost(query):

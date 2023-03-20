@@ -113,8 +113,7 @@ for (channelTitle, id, priority) in functions.getData("account", statement):
 
 					if entryExists is False:
 
-						for x in functions.countData("content", 'ALL'):
-							currentNum = x[0] + 1
+						currentNum = functions.countData("content", 'ALL') + 1
 
 						# Adding new entry to 'content' table
 						rowsAdded = functions.addContentData(videoTitle,channelTitle,vidId,filename,videoExtention,0,0,'N/A','Public',requestuser,uploadDate,currentNum)

@@ -68,6 +68,9 @@ myTables = {
 		'id': {
 			'type': 'char(12)'
 		},
+		'nr': {
+			'type': 'int'
+		}
 		'videopath': {
 			'type': 'text'
 		},
@@ -91,9 +94,6 @@ myTables = {
 		},
 		'uploaddate': {
 			'type': 'text'
-		},
-		'nr': {
-			'type': 'int'
 		}
 	},
 	'chatid': {
