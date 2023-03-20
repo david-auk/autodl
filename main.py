@@ -116,7 +116,7 @@ for (channelTitle, id, priority) in functions.getData("account", statement):
 						currentNum = functions.countData("content", 'ALL') + 1
 
 						# Adding new entry to 'content' table
-						rowsAdded = functions.addContentData(videoTitle,channelTitle,vidId,filename,videoExtention,0,0,'N/A','Public',requestuser,uploadDate,currentNum)
+						rowsAdded = functions.addContentData(videoTitle,channelTitle,vidId,currentNum,filename,videoExtention,0,0,'N/A','Public',requestuser,uploadDate)
 						totalRecordsAdded += rowsAdded
 			
 				else:

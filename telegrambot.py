@@ -285,7 +285,7 @@ def link(update, context):
 				for x in functions.countData("content", 'ALL'):
 					currentNum = x[0] + 1
 
-				functions.addContentData(videoTitle,channelTitle,vidId,filename,videoExtention,0,0,'N/A','Public',requestuser,uploadDate,currentNum)
+				functions.addContentData(videoTitle,channelTitle,vidId,currentNum,filename,videoExtention,0,0,'N/A','Public',requestuser,uploadDate)
 				context.bot.edit_message_text(chat_id=chat_id, message_id=message.message_id, text=f"Downloaded: \'{vidId}\' ✅")
 
 				if functions.subCheck(channelTitle, filename, videoExtention):
