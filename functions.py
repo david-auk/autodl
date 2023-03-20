@@ -81,7 +81,7 @@ def addContentData(title, childfrom, id, nr, videopath, extention, subtitles, de
 	addContentDataCursor = mydb.cursor(buffered=True)
 	try:
 		table = 'content'
-		statement = f"INSERT INTO {table} VALUES (\"{mydb.converter.escape(title)}\", \"{mydb.converter.escape(childfrom)}\", \"{id}\", \"{mydb.converter.escape(videopath)}\", \"{extention}\", {subtitles}, {deleted}, \"{deleteddate}\", \"{deletedtype}\", \"{requestuser}\", \"{uploaddate}\", {nr})"
+		statement = f"INSERT INTO {table} VALUES (\"{mydb.converter.escape(title)}\", \"{mydb.converter.escape(childfrom)}\", \"{id}\", {nr}, \"{mydb.converter.escape(videopath)}\", \"{extention}\", {subtitles}, {deleted}, \"{deleteddate}\", \"{deletedtype}\", \"{requestuser}\", \"{uploaddate}\")"
 		addContentDataCursor.execute(statement)
 		mydb.commit()
 		return addContentDataCursor.rowcount
