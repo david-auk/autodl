@@ -85,7 +85,7 @@ def ask_latest(update, context):
 			if int(arg) < 69: # The max lines a messages can contain. Nice
 				table = f'(SELECT * FROM content ORDER BY nr DESC LIMIT {arg})'
 				statment = f'AS subquery ORDER BY nr ASC'
-				totalRows = functions.countData(table, statment):
+				totalRows = functions.countData(table, statment)
 				maxLen = len(str(totalRows))
 				latestContent = ''
 
@@ -153,7 +153,7 @@ def button_latest(update, context):
 
 	query.edit_message_text(text=f"{text}")
 
-	totalRows = functions.countData(table, statment):
+	totalRows = functions.countData(table, statment)
 	maxLen = len(str(totalRows))
 	latestContent = ''
 
@@ -280,8 +280,7 @@ def link(update, context):
 				for x in functions.getData('chatid', f'WHERE id={chat_id}'):
 					requestuser = x[0]
 
-				for x in functions.countData("content", 'ALL'):
-					currentNum = x[0] + 1
+				currentNum = functions.countData("content", 'ALL')
 
 				functions.addContentData(videoTitle,channelTitle,vidId,currentNum,filename,videoExtention,0,0,'N/A','Public',requestuser,uploadDate)
 				context.bot.edit_message_text(chat_id=chat_id, message_id=message.message_id, text=f"Downloaded: \'{vidId}\' ✅")
