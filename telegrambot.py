@@ -142,16 +142,20 @@ def button_latest(update, context):
 				if query.data == 'today':
 					text = 'Today:'
 					today = datetime.now().strftime('%d-%m-%Y')
-					table = 'content'
-					statment = f'WHERE uploaddate=\"{today}\"'
+					#table = 'content'
+					#statment = f'WHERE uploaddate=\"{today}\"'
+					table = f'(SELECT * FROM content WHERE uploaddate=\"{today}\")'
+					statment = f'AS subquery ORDER BY nr ASC'
 				else:
 					if query.data == 'yesterday':
 						text = 'Yesterday:'
 						yesterday = (datetime.now() - timedelta(days=1)).strftime('%d-%m-%Y')
-						table = 'content'
-						statment = f'WHERE uploaddate=\"{yesterday}\"'
+						#table = 'content'
+						#statment = f'WHERE uploaddate=\"{yesterday}\"'
+						table = f'(SELECT * FROM content WHERE uploaddate=\"{yesterday}\")'
+						statment = f'AS subquery ORDER BY nr ASC'
 
-	query.edit_message_text(text=f"{text}")
+	#query.edit_message_text(text=f"{text}")
 
 	totalRows = functions.countData(table, statment)
 	maxLen = len(str(totalRows))
@@ -166,7 +170,8 @@ def button_latest(update, context):
 	else:
 		latestContent='No Data.'
 
-	context.bot.send_message(chat_id=update.effective_chat.id, text=latestContent)
+	#context.bot.send_message(chat_id=update.effective_chat.id, text=latestContent)
+	query.edit_message_text(text=latestContent)
 
 def get_info(update, context):
 	"""Listen for user input and do an if statement."""
@@ -229,7 +234,9 @@ def link(update, context):
 			context.bot.send_message(chat_id=update.message.chat_id, text="Sorry, you are not authorized to use this bot.")
 			return
 
+		# Check if the message is a link
 		if message_text[:7] == 'http://' or message_text[:8] == 'https://':
+			# Check if the link is a youtube video
 			if message_text[24:32] == 'watch?v=' or message_text[23:31] == 'watch?v=' or message_text[20:28] == 'watch?v=' or message_text[8:16] == 'youtu.be':
 				vidId = functions.getVidId(message_text)
 				

@@ -55,6 +55,7 @@ mydb = database.connect(
 
 # Function for adding instances to the account table
 def addAccountData(title, channelid, priority):
+	mydb.reconnect()
 	addAccountDataCursor = mydb.cursor(buffered=True)
 	try:
 		table = 'account'
@@ -67,6 +68,7 @@ def addAccountData(title, channelid, priority):
 
 # Function for adding instances to the content table
 def addChatIdData(name, id, priority, authenticated):
+	mydb.reconnect()
 	addChatIdDataCursor = mydb.cursor(buffered=True)
 	try:
 		table = 'chatid'
@@ -78,6 +80,7 @@ def addChatIdData(name, id, priority, authenticated):
 
 # Function for adding instances to the content table
 def addContentData(title, childfrom, id, nr, videopath, extention, subtitles, deleted, deleteddate, deletedtype, requestuser, uploaddate):
+	mydb.reconnect()
 	addContentDataCursor = mydb.cursor(buffered=True)
 	try:
 		table = 'content'
@@ -90,6 +93,7 @@ def addContentData(title, childfrom, id, nr, videopath, extention, subtitles, de
 
 # Function for deleting rows in any table using the id variable
 def delData(table, instanceid):
+	mydb.reconnect()
 	delDataCursor = mydb.cursor(buffered=True)
 	try:
 		statement = "DELETE FROM " + table + " WHERE id=\'{}\'".format(instanceid)
@@ -102,6 +106,7 @@ def delData(table, instanceid):
 
 # Function for searching DB
 def getData(table, inputstatement):
+	mydb.reconnect()
 	getDataCursor = mydb.cursor(buffered=True)
 	try:
 		if inputstatement == "ALL":
@@ -115,6 +120,7 @@ def getData(table, inputstatement):
 
 # Function for changing data of a table
 def chData(table, id, column, newData):
+	mydb.reconnect()
 	chDataCursor = mydb.cursor(buffered=True)
 	try:
 		statement = "UPDATE " + table + " SET {}=\"{}\" WHERE id=\"{}\"".format(column,mydb.converter.escape(newData),id)
@@ -125,6 +131,7 @@ def chData(table, id, column, newData):
 
 # Function for counting data of a table
 def countData(table, inputstatement):
+	mydb.reconnect()
 	countDataCursor = mydb.cursor(buffered=True)
 	column = 'id'
 	if inputstatement == 'ALL':
@@ -395,15 +402,3 @@ def avalibilityCheck(vidId):
 				avalibilityType = "Unlisted"
 
 	return isAvalible, avalibilityType, striker
-
-# Function for closing all the cursors at once
-def closeCursor():
-	chDataCursor.close()
-	delDataCursor.close()
-	getDataCursor.close()
-	countDataCursor.close()
-	addChatIdDataCursor.close()
-	addContentDataCursor.close()
-	addAccountDataCursor.close()
-	getDataContentCheckCursor.close()
-	addDeletedContentDataCursor.close()
