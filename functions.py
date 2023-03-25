@@ -79,12 +79,12 @@ def addChatIdData(name, id, priority, authenticated):
 		print(f"Error adding entry from {mydb.database}[{table}]: {e}")
 
 # Function for adding instances to the content table
-def addContentData(title, childfrom, id, nr, videopath, extention, subtitles, deleted, deleteddate, deletedtype, requestuser, uploaddate):
+def addContentData(title, id, childfrom, nr, videopath, extention, subtitles, uploaddate, downloaddate, deleteddate, deleted, deletedtype, requestuser):
 	mydb.reconnect()
 	addContentDataCursor = mydb.cursor(buffered=True)
 	try:
 		table = 'content'
-		statement = f"INSERT INTO {table} VALUES (\"{mydb.converter.escape(title)}\", \"{mydb.converter.escape(childfrom)}\", \"{id}\", {nr}, \"{mydb.converter.escape(videopath)}\", \"{extention}\", {subtitles}, {deleted}, \"{deleteddate}\", \"{deletedtype}\", \"{requestuser}\", \"{uploaddate}\")"
+		statement = f"INSERT INTO {table} VALUES (\"{mydb.converter.escape(title)}\", \"{id}\", \"{mydb.converter.escape(childfrom)}\", {nr}, \"{mydb.converter.escape(videopath)}\", \"{extention}\", {subtitles}, \"{uploaddate}\", \"{downloaddate}\", \"{deleteddate}\", {deleted}, \"{deletedtype}\", \"{requestuser}\")"
 		addContentDataCursor.execute(statement)
 		mydb.commit()
 		return addContentDataCursor.rowcount
@@ -143,6 +143,15 @@ def countData(table, inputstatement):
 	for x in countDataCursor:
 		count = x[0]
 	return count
+
+def getMaxDataValue(table, column):
+	mydb.reconnect()
+	getMaxDataValueCursor = mydb.cursor(buffered=True)
+	statement = f'SELECT MAX({column}) FROM {table};'
+	getMaxDataValueCursor.execute(statement)
+	for x in getMaxDataValueCursor:
+		maxValue = x[0]
+	return maxValue
 
 # Function that messages the 'Host' using credentials from secret.py
 def msgHost(query):

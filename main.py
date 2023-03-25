@@ -113,11 +113,13 @@ for (channelTitle, id, priority) in functions.getData("account", statement):
 
 					if entryExists is False:
 
-						currentNum = functions.countData("content", 'ALL') + 1
+						currentNum = functions.getMaxDataValue('content', 'nr') + 1
+
+						# Getting the current date in desired format
+						downloaddate = datetime.date.today().strftime('%d-%m-%Y')
 
 						# Adding new entry to 'content' table
-						rowsAdded = functions.addContentData(videoTitle,channelTitle,vidId,currentNum,filename,videoExtention,0,0,'N/A','Public',requestuser,uploadDate)
-						totalRecordsAdded += rowsAdded
+						totalRecordsAdded += functions.addContentData(videoTitle, vidId, channelTitle, currentNum, filename, videoExtention, 0, uploadDate, downloaddate, 'N/A', 0, 'Public', requestuser)
 			
 				else:
 

@@ -62,11 +62,11 @@ myTables = {
 		'title': {
 			'type': 'text'
 		},
-		'childfrom': {
-			'type': 'text'
-		},
 		'id': {
 			'type': 'char(12)'
+		},
+		'childfrom': {
+			'type': 'text'
 		},
 		'nr': {
 			'type': 'int'
@@ -80,19 +80,22 @@ myTables = {
 		'subtitles': {
 			'type': 'int(11)'
 		},
-		'deleted': {
-			'type': 'int(11)'
+		'uploaddate': {
+			'type': 'text'
+		},
+		'downloaddate': {
+			'type': 'text'
 		},
 		'deleteddate': {
 			'type': 'text'
+		},
+		'deleted': {
+			'type': 'int(11)'
 		},
 		'deletedtype': {
 			'type': 'text'
 		},
 		'requestuser': {
-			'type': 'text'
-		},
-		'uploaddate': {
 			'type': 'text'
 		}
 	},
@@ -196,4 +199,4 @@ for key in telegramSql:
 			else:
 				functions.addChatIdData('N/A', telegramSql[key][sub_key]['id'], telegramSql[key][sub_key]['priority'], 'N/A')
 
-myCursor.close()
+functions.addChatIdDataCursor.close()

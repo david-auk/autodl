@@ -91,7 +91,7 @@ def ask_latest(update, context):
 
 				if totalRows:
 					totalRows += 1
-					for (title, childfrom, id, nr, videopath, extention, subtitles, deleted, deleteddate, deletedtype, requestuser, uploaddate) in functions.getData(table, statment):
+					for (title, id, childfrom, nr, videopath, extention, subtitles, uploaddate, downloaddate, deleteddate, deleted, deletedtype, requestuser) in functions.getData(table, statment):
 						totalRows -= 1
 						space = " " * (maxLen - len(str(totalRows)))
 						latestContent += f"{totalRows}.{space} {childfrom} | {title}\n"
@@ -167,7 +167,7 @@ def buttonResolver(update, context):
 
 		if totalRows:
 			totalRows += 1
-			for (title, childfrom, id, nr, videopath, extention, subtitles, deleted, deleteddate, deletedtype, requestuser, uploaddate) in functions.getData(table, statment):
+			for (title, id, childfrom, nr, videopath, extention, subtitles, uploaddate, downloaddate, deleteddate, deleted, deletedtype, requestuser) in functions.getData(table, statment):
 				totalRows -= 1
 				space = " " * (maxLen - len(str(totalRows)))
 				latestContent += f"{totalRows}.{space} {childfrom} | {title}\n"
@@ -182,7 +182,7 @@ def buttonResolver(update, context):
 		channelChatInfo = context.user_data.get("channelChatInfo")
 		channelChatInfo['priority'] = query.data
 		query.delete_message()
-		context.bot.edit_message_text(chat_id=channelChatInfo['chat_id'], message_id=channelChatInfo['message_id'], text=f"Prepairing backup: \'{channelChatInfo['ytLinkIdClean']}\' ⏳\n\nPriority: {channelChatInfo['priority']}\n\nChannel name: (type name | type 'Cancel' to stop)")
+		context.bot.edit_message_text(chat_id=channelChatInfo['chat_id'], message_id=channelChatInfo['message_id'], text=f"Prepairing backup: \'{channelChatInfo['ytLinkIdClean']}\' ⏳\n\nPriority: {channelChatInfo['priority']}\n\n(type name | type 'Cancel' to stop)\nChannel name:")
 		
 		context.user_data["next_handler"] = 'channel_name'
 		context.user_data["channelChatInfo"] = channelChatInfo
@@ -326,8 +326,10 @@ def link(update, context):
 
 				currentNum = functions.countData("content", 'ALL')
 
-				functions.addContentData(videoTitle,channelTitle,ytLinkId,currentNum,filename,videoExtention,0,0,'N/A','Public',chat_id,uploadDate)
+				downloaddate = datetime.now().strftime('%d-%m-%Y')
 
+				functions.addContentData(videoTitle, ytLinkId, channelTitle, currentNum, filename, videoExtention, 0, uploadDate, downloaddate, 'N/A', 0, 'Public', chat_id)
+				
 				context.bot.delete_message(chat_id=chat_id, message_id=message.message_id)
 				context.bot.send_message(chat_id=chat_id, text=f"Downloaded: \'{ytLinkId}\' ✅")
 				
