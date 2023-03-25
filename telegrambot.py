@@ -31,13 +31,13 @@ def start(update, context):
 	else:
 		functions.addChatIdData(name, chat_id, 'N/A', 'N/A')
 
-def help(update, context):
+def helpMenu(update, context):
 	"""Send a message when the command /help is issued."""
-	update.message.reply_text('The following commands are available:\n'
-							  '/help   - Show list of useful commands\n'
+	update.message.reply_text('The following commands are available:\n\n'
+							  '/help - Show list of useful commands\n'
 							  '/passwd - Check password\n'
 							  '/latest - Ask for the latest data\n'
-							  '/info   - Get info about a link')
+							  '/info - Get info about a link')
 
 def is_allowed_user(update, context):
 	"""Check if the current user ID is allowed."""
@@ -102,7 +102,7 @@ def ask_latest(update, context):
 			else:
 				context.bot.send_message(chat_id=update.message.chat.id, text='Requested over MAX lines')
 		else:
-			context.bot.send_message(chat_id=update.message.chat.id, text='Give a number as argument or use the buttons.\n/latest')
+			context.bot.send_message(chat_id=update.message.chat.id, text='Give a number as argument or use the buttons./latest')
 		return
 
 	keyboard = [[InlineKeyboardButton("10", callback_data='10'),InlineKeyboardButton("20", callback_data='20'),InlineKeyboardButton("30", callback_data='30')],[InlineKeyboardButton("Today", callback_data='today'),InlineKeyboardButton("Yesterday", callback_data='yesterday')]]
@@ -110,68 +110,82 @@ def ask_latest(update, context):
 	reply_markup = InlineKeyboardMarkup(keyboard)
 
 	update.message.reply_text('Please choose an option:', reply_markup=reply_markup)
+	context.user_data["next_handler"] = "latest"
 
 
-def button_latest(update, context):
+def buttonResolver(update, context):
 	"""Handle the button press."""
 	#chat_id = update.message.chat_id
 	query = update.callback_query
 	query.answer()
+	buttonHandler = context.user_data["next_handler"]
+	#context.user_data["next_handler"] = ''
 
-	if query.data == '10':
-		text = 'Latest records:'
-		table = f'(SELECT * FROM content ORDER BY nr DESC LIMIT 10)'
-		statment = f'AS subquery ORDER BY nr ASC'
-		# BC the final statment should look like 'SELECT * FROM (SELECT * FROM content ORDER BY nr DESC LIMIT {latestNum}) AS subquery ORDER BY nr ASC'
-		# But the getData func requires a table
-	else:
-		if query.data == '20':
+	if buttonHandler == 'latest':
+		if query.data == '10':
 			text = 'Latest records:'
-			table = f'(SELECT * FROM content ORDER BY nr DESC LIMIT 20)'
+			table = f'(SELECT * FROM content ORDER BY nr DESC LIMIT 10)'
 			statment = f'AS subquery ORDER BY nr ASC'
 			# BC the final statment should look like 'SELECT * FROM (SELECT * FROM content ORDER BY nr DESC LIMIT {latestNum}) AS subquery ORDER BY nr ASC'
 			# But the getData func requires a table
 		else:
-			if query.data == '30':
+			if query.data == '20':
 				text = 'Latest records:'
-				table = f'(SELECT * FROM content ORDER BY nr DESC LIMIT 30)'
+				table = f'(SELECT * FROM content ORDER BY nr DESC LIMIT 20)'
 				statment = f'AS subquery ORDER BY nr ASC'
 				# BC the final statment should look like 'SELECT * FROM (SELECT * FROM content ORDER BY nr DESC LIMIT {latestNum}) AS subquery ORDER BY nr ASC'
 				# But the getData func requires a table
 			else:
-				if query.data == 'today':
-					text = 'Today:'
-					today = datetime.now().strftime('%d-%m-%Y')
-					#table = 'content'
-					#statment = f'WHERE uploaddate=\"{today}\"'
-					table = f'(SELECT * FROM content WHERE uploaddate=\"{today}\")'
+				if query.data == '30':
+					text = 'Latest records:'
+					table = f'(SELECT * FROM content ORDER BY nr DESC LIMIT 30)'
 					statment = f'AS subquery ORDER BY nr ASC'
+					# BC the final statment should look like 'SELECT * FROM (SELECT * FROM content ORDER BY nr DESC LIMIT {latestNum}) AS subquery ORDER BY nr ASC'
+					# But the getData func requires a table
 				else:
-					if query.data == 'yesterday':
-						text = 'Yesterday:'
-						yesterday = (datetime.now() - timedelta(days=1)).strftime('%d-%m-%Y')
+					if query.data == 'today':
+						text = 'Today:'
+						today = datetime.now().strftime('%d-%m-%Y')
 						#table = 'content'
-						#statment = f'WHERE uploaddate=\"{yesterday}\"'
-						table = f'(SELECT * FROM content WHERE uploaddate=\"{yesterday}\")'
+						#statment = f'WHERE uploaddate=\"{today}\"'
+						table = f'(SELECT * FROM content WHERE uploaddate=\"{today}\")'
 						statment = f'AS subquery ORDER BY nr ASC'
+					else:
+						if query.data == 'yesterday':
+							text = 'Yesterday:'
+							yesterday = (datetime.now() - timedelta(days=1)).strftime('%d-%m-%Y')
+							#table = 'content'
+							#statment = f'WHERE uploaddate=\"{yesterday}\"'
+							table = f'(SELECT * FROM content WHERE uploaddate=\"{yesterday}\")'
+							statment = f'AS subquery ORDER BY nr ASC'
 
-	#query.edit_message_text(text=f"{text}")
+		#query.edit_message_text(text=f"{text}")
 
-	totalRows = functions.countData(table, statment)
-	maxLen = len(str(totalRows))
-	latestContent = ''
+		totalRows = functions.countData(table, statment)
+		maxLen = len(str(totalRows))
+		latestContent = ''
 
-	if totalRows:
-		totalRows += 1
-		for (title, childfrom, id, nr, videopath, extention, subtitles, deleted, deleteddate, deletedtype, requestuser, uploaddate) in functions.getData(table, statment):
-			totalRows -= 1
-			space = " " * (maxLen - len(str(totalRows)))
-			latestContent += f"{totalRows}.{space} {childfrom} | {title}\n"
-	else:
-		latestContent='No Data.'
+		if totalRows:
+			totalRows += 1
+			for (title, childfrom, id, nr, videopath, extention, subtitles, deleted, deleteddate, deletedtype, requestuser, uploaddate) in functions.getData(table, statment):
+				totalRows -= 1
+				space = " " * (maxLen - len(str(totalRows)))
+				latestContent += f"{totalRows}.{space} {childfrom} | {title}\n"
+		else:
+			latestContent='No Data.'
 
-	#context.bot.send_message(chat_id=update.effective_chat.id, text=latestContent)
-	query.edit_message_text(text=latestContent)
+		#context.bot.send_message(chat_id=update.effective_chat.id, text=latestContent)
+		query.edit_message_text(text=latestContent)
+
+	# Incoming priority request
+	elif buttonHandler == 'priority':
+		channelChatInfo = context.user_data.get("channelChatInfo")
+		channelChatInfo['priority'] = query.data
+		query.delete_message()
+		context.bot.edit_message_text(chat_id=channelChatInfo['chat_id'], message_id=channelChatInfo['message_id'], text=f"Prepairing backup: \'{channelChatInfo['ytLinkIdClean']}\' ⏳\n\nPriority: {channelChatInfo['priority']}\n\nChannel name: (type name | type 'Cancel' to stop)")
+		
+		context.user_data["next_handler"] = 'channel_name'
+		context.user_data["channelChatInfo"] = channelChatInfo
 
 def get_info(update, context):
 	"""Listen for user input and do an if statement."""
@@ -226,6 +240,28 @@ def link(update, context):
 		else:
 			context.bot.send_message(chat_id=chat_id, text="Sorry, that's not the correct password.")
 
+	elif context.user_data.get("next_handler") == "channel_name":
+		channelChatInfo = context.user_data.get("channelChatInfo")
+		
+		# Check if user wants to stop
+		if message_text.lower() == 'cancel':
+			context.bot.edit_message_text(chat_id=chat_id, message_id=channelChatInfo['message_id'], text="Canceled request.")		
+			context.user_data["next_handler"] = ""
+			context.user_data["channelChatInfo"] = ""
+			return
+
+		channelChatInfo['channel_name'] = functions.accNameFriendly(message_text)
+
+		context.bot.delete_message(chat_id=chat_id, message_id=update.message.message_id)
+		print(channelChatInfo)
+		for (name, id, priority, authenticated) in functions.getData('chatid', f'WHERE id={chat_id}'):
+			if priority == '1':
+				functions.addAccountData(channelChatInfo['channel_name'], channelChatInfo['channel_id'], channelChatInfo['priority'])
+				context.bot.edit_message_text(chat_id=channelChatInfo['chat_id'], message_id=channelChatInfo['message_id'], text=f"Added: {channelChatInfo['channel_name']} ✅")
+			else:
+				functions.msgHost(f"User '{name}' just requested to backup channel: https://youtube.com/channel/{channelChatInfo['channel_id']} " + "{" + f" 'priority': '{channelChatInfo['priority']}', 'channel_name': '{channelChatInfo['channel_name']}' " + "}" + "\n\nAdd with messaging the link back")
+				context.bot.edit_message_text(chat_id=channelChatInfo['chat_id'], message_id=channelChatInfo['message_id'], text=f"Added: {channelChatInfo['channel_name']} ⏳")
+	
 	# Handle other messages as usual
 	else:
 		
@@ -236,77 +272,110 @@ def link(update, context):
 
 		# Check if the message is a link
 		if message_text[:7] == 'http://' or message_text[:8] == 'https://':
-			# Check if the link is a youtube video
-			if message_text[24:32] == 'watch?v=' or message_text[23:31] == 'watch?v=' or message_text[20:28] == 'watch?v=' or message_text[8:16] == 'youtu.be':
-				vidId = functions.getVidId(message_text)
-				
+			isYtLink, ytLinkType, ytLinkId, ytLinkIdClean = functions.isYtLink(message_text)
+
+			# If link is not a usable link the function is exited
+			if isYtLink is False:
+				context.bot.send_message(chat_id=chat_id, text=f"Link not recognized..\nUse /help to see all compatible commands")
+				return
+
+			if ytLinkType == 'video':
 
 				# Checking if the video got added to the database while downloading
 				entryExists = False
-				for x in functions.getData('content', f'WHERE id=\"{vidId}\"'):
+				for x in functions.getData('content', f'WHERE id=\"{ytLinkId}\"'):
 					entryExists = True
 
 				if entryExists:
-					context.bot.send_message(chat_id=chat_id, text=f"Already downloaded video: \'{vidId}\' ✅")
+					context.bot.send_message(chat_id=chat_id, text=f"Already downloaded video: \'{ytLinkId}\' ✅")
 					return
 
-				message = context.bot.send_message(chat_id=chat_id, text=f"Getting facts for: \'{vidId}\'")
+				message = context.bot.send_message(chat_id=chat_id, text=f"Getting facts for: \'{ytLinkId}\'")
 				message_id = update.message.message_id
 
-				succes, info, uploadDate = functions.getFacts(vidId)
+				succes, info, uploadDate = functions.getFacts(ytLinkId)
 				if succes:
 					videoTitle = info['title']
 					videoExtention = info['ext']
 					channelTitle = functions.accNameFriendly(info['uploader'])
 					filename = functions.filenameFriendly(videoTitle)
 
-					context.bot.edit_message_text(chat_id=chat_id, message_id=message.message_id, text=f"Getting facts for: \'{vidId}\'\n\nFacts retreved. ☑️")
+					context.bot.edit_message_text(chat_id=chat_id, message_id=message.message_id, text=f"Getting facts for: \'{ytLinkId}\'\n\nFacts retreved. ☑️")
 				else:
-					context.bot.edit_message_text(chat_id=chat_id, message_id=message.message_id, text=f"Getting facts for: \'{vidId}\'\n\nFacts retreved. ❌\n\nCheck your link")	
+					context.bot.edit_message_text(chat_id=chat_id, message_id=message.message_id, text=f"Getting facts for: \'{ytLinkId}\'\n\nFacts retreved. ❌\n\nCheck your link")	
 					return				
 			
-				succes = functions.downloadThumbnail(vidId, channelTitle, filename, info['thumbnail'])
+				succes = functions.downloadThumbnail(ytLinkId, channelTitle, filename, info['thumbnail'])
 				if succes:
-					context.bot.edit_message_text(chat_id=chat_id, message_id=message.message_id, text=f"Getting facts for: \'{vidId}\'\n\nFacts retreved. ☑️\n\nDownloaded thumbnail. ☑️")	
+					context.bot.edit_message_text(chat_id=chat_id, message_id=message.message_id, text=f"Getting facts for: \'{ytLinkId}\'\n\nFacts retreved. ☑️\n\nDownloaded thumbnail. ☑️")	
 				else:
-					context.bot.edit_message_text(chat_id=chat_id, message_id=message.message_id, text=f"Getting facts for: \'{vidId}\'\n\nFacts retreved. ☑️\n\nDownloaded thumbnail. ❌\n\nSomething weird is going on, Host contacted")
+					context.bot.edit_message_text(chat_id=chat_id, message_id=message.message_id, text=f"Getting facts for: \'{ytLinkId}\'\n\nFacts retreved. ☑️\n\nDownloaded thumbnail. ❌\n\nSomething weird is going on, Host contacted")
 					return
 
 				succes = functions.writeDescription(channelTitle, filename, info['description'])
 				if succes:
-					context.bot.edit_message_text(chat_id=chat_id, message_id=message.message_id, text=f"Getting facts for: \'{vidId}\'\n\nFacts retreved. ☑️\n\nDownloaded thumbnail. ☑️\n\nWriten description. ☑️\n\nDownloading video.")	
+					context.bot.edit_message_text(chat_id=chat_id, message_id=message.message_id, text=f"Getting facts for: \'{ytLinkId}\'\n\nFacts retreved. ☑️\n\nDownloaded thumbnail. ☑️\n\nWriten description. ☑️\n\nDownloading video.")	
 				else:
-					context.bot.edit_message_text(chat_id=chat_id, message_id=message.message_id, text=f"Getting facts for: \'{vidId}\'\n\nFacts retreved. ☑️\n\nDownloaded thumbnail. ☑️\n\nWriten description. ❌\n\nPermission issue, Please contact host")
+					context.bot.edit_message_text(chat_id=chat_id, message_id=message.message_id, text=f"Getting facts for: \'{ytLinkId}\'\n\nFacts retreved. ☑️\n\nDownloaded thumbnail. ☑️\n\nWriten description. ❌\n\nPermission issue, Please contact host")
 					return
 
-				success, failureType = functions.downloadVid(vidId, channelTitle, filename)
+				success, failureType = functions.downloadVid(ytLinkId, channelTitle, filename)
 				if succes is False:
-					context.bot.edit_message_text(chat_id=chat_id, message_id=message.message_id, text=f"Getting facts for: \'{vidId}\'\n\nFacts retreved. ☑️\n\nDownloaded thumbnail. ☑️\n\nWriten description. ☑️\n\nDownloaded video. ❌ ERROR-type: {failureType}\nHost contacted.")
+					context.bot.edit_message_text(chat_id=chat_id, message_id=message.message_id, text=f"Getting facts for: \'{ytLinkId}\'\n\nFacts retreved. ☑️\n\nDownloaded thumbnail. ☑️\n\nWriten description. ☑️\n\nDownloaded video. ❌ ERROR-type: {failureType}\nHost contacted.")
 					return
-
-				for x in functions.getData('chatid', f'WHERE id={chat_id}'):
-					requestuser = x[0]
 
 				currentNum = functions.countData("content", 'ALL')
 
-				functions.addContentData(videoTitle,channelTitle,vidId,currentNum,filename,videoExtention,0,0,'N/A','Public',requestuser,uploadDate)
-				context.bot.edit_message_text(chat_id=chat_id, message_id=message.message_id, text=f"Downloaded: \'{vidId}\' ✅")
+				functions.addContentData(videoTitle,channelTitle,ytLinkId,currentNum,filename,videoExtention,0,0,'N/A','Public',chat_id,uploadDate)
 
+				context.bot.delete_message(chat_id=chat_id, message_id=message.message_id)
+				context.bot.send_message(chat_id=chat_id, text=f"Downloaded: \'{ytLinkId}\' ✅")
+				
 				if functions.subCheck(channelTitle, filename, videoExtention):
-					functions.chData('content', vidId, 'subtitles', 1)
+					functions.chData('content', ytLinkId, 'subtitles', 1)
 
-				for x in functions.getData('chatid', f'WHERE id={chat_id}'):
-					priority = x[2]
+				for (name, id, priority, authenticated) in functions.getData('chatid', f'WHERE id={chat_id}'):
 					if priority != '1':
-						functions.msgHost(f"{requestuser} Just downloaded: https://youtube.com/watch?v={vidId}")
-						functions.msgHost(f"/remove {vidId}")
+						functions.msgHost(f"{name}, Just downloaded: https://youtube.com/watch?v={ytLinkId}")
+						functions.msgHost(f"/remove {ytLinkId}")
 			else:
-				context.bot.send_message(chat_id=chat_id, text=f"Thanks for the link, this is not a youtube video link")
+				if ytLinkType == 'channel':
+
+					# Checking if the Id is already in the desired format
+					if ytLinkId[:8] == 'channel/':
+						message = False
+						convertedChannelId = ytLinkId[8:]
+					else:
+						message = context.bot.send_message(chat_id=chat_id, text=f"Getting facts for: \'{ytLinkIdClean}\'")
+						convertedChannelId = functions.getChannelId(ytLinkId)
+
+					for (name, id, priority) in functions.getData('account', f'WHERE id=\"{convertedChannelId}\"'):
+						if message:
+							context.bot.edit_message_text(chat_id=chat_id, message_id=message.message_id, text=f"Already backing up channel: \'{name}\' ✅")
+						else:
+							context.bot.send_message(chat_id=chat_id, text=f"Already backing up channel: \'{name}\' ✅")
+						return
+
+
+					if message:
+						context.bot.edit_message_text(chat_id=chat_id, message_id=message.message_id, text=f"Prepairing backup: \'{ytLinkIdClean}\' ⏳")							
+					else:
+						message = context.bot.send_message(chat_id=chat_id, text=f"Prepairing backup: \'{ytLinkIdClean}\' ⏳")
+			
+					
+					#context.bot.edit_message_text(chat_id=chat_id, text=f"Prepairing to backup: \'{ytLinkIdClean}\' ⏳", reply_markup=reply_markup)
+					keyboard = [[InlineKeyboardButton("1 (fastest)", callback_data='1'),InlineKeyboardButton("2 (avg)", callback_data='2'),InlineKeyboardButton("3 (slowest)", callback_data='3')]]
+					reply_markup = InlineKeyboardMarkup(keyboard)
+
+					update.message.reply_text(f"assign a 'priority' value?", reply_markup=reply_markup)
+					context.user_data["next_handler"] = "priority"
+					context.user_data["channelChatInfo"] = {'message_id': f'{message.message_id}', 'chat_id': f'{chat_id}', 'channel_id': f'{convertedChannelId}', 'ytLinkIdClean': f'{ytLinkIdClean}'}
+					return
+
 		else:
-			context.bot.send_message(chat_id=chat_id, text="Sorry, that's not a valid link.")
+			context.bot.send_message(chat_id=chat_id, text="Sorry, i don't understand..\nUse /help to see all compatible commands")
 
 	context.user_data["next_handler"] = ""
-
 
 def error(update, context):
 	"""Echo the user message."""
@@ -322,10 +391,10 @@ def main():
 
 	# Add handlers for different commands
 	dp.add_handler(CommandHandler("start", start))
-	dp.add_handler(CommandHandler("help", help))
+	dp.add_handler(CommandHandler("help", helpMenu))
 	dp.add_handler(CommandHandler("passwd", check_password))
 	dp.add_handler(CommandHandler("latest", ask_latest))
-	dp.add_handler(CallbackQueryHandler(button_latest))
+	dp.add_handler(CallbackQueryHandler(buttonResolver))
 	dp.add_handler(CommandHandler("info", get_info))
 	dp.add_handler(MessageHandler(Filters.text & (~Filters.command), link))
 	dp.add_handler(MessageHandler(Filters.text & Filters.command, error))

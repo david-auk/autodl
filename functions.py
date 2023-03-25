@@ -278,16 +278,18 @@ def filenameFriendly(srtValue):
 	
 	return filename
 
+# For making a dir in rootdownload when a python download request has come in
 def accNameFriendly(srtValue):
-    # Split the input string into a list of words
-    srtValue = srtValue.lower()
-    words = srtValue.split()
+	# Split the input string into a list of words
+	srtValue = srtValue.lower()
+	words = srtValue.split()
 
-    # Capitalize the first letter of each word and join them together
-    modifiedWords = [word.capitalize() for word in words]
-    modifiedString = ''.join(modifiedWords)
+	# Capitalize the first letter of each word and join them together
+	modifiedWords = [word.capitalize() for word in words]
+	modifiedString = ''.join(modifiedWords)
+	modifiedString = re.sub(r'[^a-zA-Z0-9\-]+', '', modifiedString)
 
-    return modifiedString
+	return modifiedString
 
 
 # Function for saving facts of a video to a dictionary
@@ -332,22 +334,43 @@ def getFacts(vidId):
 	uploadDate = f"{day}-{month}-{year}"
 	return success, info, uploadDate
 
-# Function for getting vidId
-def getVidId(link):
+def isYtLink(link):
+	"""Extracts the YouTube video ID and type (video or channel) from a URL string."""
+	video_pattern = r"(?:https?:\/\/)?(?:www\.)?(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=))([\w\-]{11})(?:\S+)?"
+	channel_pattern1 = r"(?:https?:\/\/)?(?:www\.)?youtube\.com\/(?:c\/|channel\/)([\w\-]+)(?:\S+)?"
+	channel_pattern2 = r"(?:https?:\/\/)?(?:www\.)?youtube\.com\/@([\w\-]+)(?:\S+)?"
+	channel_pattern3 = r"(?:https?:\/\/)?(?:www\.)?reddit.com\/r\/([\w\-]+)(?:\S+)?"
 	
-	# Check if the URL is in the format https://youtu.be/<video_id>
-	if 'youtu.be' in link:
-
-		# Extract the video ID from the URL
-		video_id = link.split('/')[-1].split('?')[0]
+	video_match = re.match(video_pattern, link)
+	channel_match1 = re.match(channel_pattern1, link)
+	channel_match2 = re.match(channel_pattern2, link)
+	channel_match3 = re.match(channel_pattern3, link)
+	
+	if video_match:
+		return (True, "video", video_match.group(1), 'N/A')
+	elif channel_match1:
+		return (True, "channel", f"channel/{channel_match1.group(1)}", channel_match1.group(1))
+	elif channel_match2:
+		return (True, "channel", f"@{channel_match2.group(1)}", channel_match2.group(1))
+	elif channel_match3:
+		return (True, "channel", f"r/{channel_match3.group(1)}", channel_match3.group(1))
 	else:
+		return (False, 'N/A', 'N/A', 'N/A')
 
-		# Extract the video ID from the query string of the URL
-		query_string = link.split('?')[1]
-		params = dict(item.split('=') for item in query_string.split('&'))
-		video_id = params['v']
-	
-	return video_id
+# Function for getting the id of chosen type
+def getChannelId(ytChannelId):
+	ydl_opts = {
+		'skip_download': True,
+		'quiet': True,
+		'no_warnings': True,
+		'playlist_items': '1',
+		'match_filter': 'channel',
+		'extract_flat': True,
+	}
+	with YoutubeDL(ydl_opts) as ydl:
+		result = ydl.extract_info(f"https://youtube.com/{ytChannelId}", download=False)
+		if result:
+			return result.get('channel_id')
 
 # 
 def subCheck(channelTitle, filename, ext):
