@@ -11,7 +11,7 @@ formattedDate = currentDate.strftime("%d-%m-%Y")
 totalRows = functions.countData("content", 'ALL')
 
 currentRequestNum = 0
-for (title, childfrom, id, nr, videopath, extention, subtitles, deleted, deleteddate, deletedtype, requestuser, uploaddate) in functions.getData('content', 'ORDER BY deleted DESC'):
+for (title, id, childfrom, nr, videopath, extention, subtitles, uploaddate, downloaddate, deleteddate, deleted, deletedtype, requestuser) in functions.getData('content', 'ORDER BY deleted DESC'):
 	isAvalible, avalibilityType, striker = functions.avalibilityCheck(id)
 
 	currentRequestNum += 1

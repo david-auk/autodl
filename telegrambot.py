@@ -15,7 +15,7 @@ password = secret.telegram['credentials']['userpass']
 # Define handlers for each command
 def start(update, context):
 	"""Send a message when the command /start is issued."""
-	update.message.reply_text('Hi! Send /help to see the list of available commands.')
+	update.message.reply_text('Welcome to the *Telegram Command Interface*\n\nUse: /help', parse_mode='MarkdownV2')
 	user = update.message.from_user
 	chat_id = update.message.from_user.id
 	name = f"@{user.username}"
@@ -148,7 +148,7 @@ def buttonResolver(update, context):
 						today = datetime.now().strftime('%d-%m-%Y')
 						#table = 'content'
 						#statment = f'WHERE uploaddate=\"{today}\"'
-						table = f'(SELECT * FROM content WHERE uploaddate=\"{today}\")'
+						table = f'(SELECT * FROM content WHERE downloaddate=\"{today}\")'
 						statment = f'AS subquery ORDER BY nr ASC'
 					else:
 						if query.data == 'yesterday':
@@ -156,7 +156,7 @@ def buttonResolver(update, context):
 							yesterday = (datetime.now() - timedelta(days=1)).strftime('%d-%m-%Y')
 							#table = 'content'
 							#statment = f'WHERE uploaddate=\"{yesterday}\"'
-							table = f'(SELECT * FROM content WHERE uploaddate=\"{yesterday}\")'
+							table = f'(SELECT * FROM content WHERE downloaddate=\"{yesterday}\")'
 							statment = f'AS subquery ORDER BY nr ASC'
 
 		#query.edit_message_text(text=f"{text}")
