@@ -46,6 +46,10 @@ for (channelTitle, id, priority) in functions.getData("account", statement):
 
 	for video in videos:
 		vidId = video['videoId']
+		if video == '':
+			print(f"{functions.coloursB['red']}NO VIDEOS FOUND{functions.colours['reset']}")
+			continue
+
 		videoTitle = video['title']['runs'][0]['text']
 		print(videoTitle)
 
