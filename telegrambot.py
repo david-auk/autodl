@@ -178,11 +178,18 @@ def buttonResolver(update, context):
 		query.edit_message_text(text=latestContent)
 
 	# Incoming priority request
-	elif buttonHandler == 'priority':
+	elif buttonHandler == 'priority': 
 		channelChatInfo = context.user_data.get("channelChatInfo")
 		channelChatInfo['priority'] = query.data
-		query.delete_message()
-		context.bot.edit_message_text(chat_id=channelChatInfo['chat_id'], message_id=channelChatInfo['message_id'], text=f"Prepairing backup: \'{channelChatInfo['ytLinkIdClean']}\' ⏳\n\nPriority: {channelChatInfo['priority']}\n\n(type name | type 'Cancel' to stop)\nChannel name:")
+		if channelChatInfo['priority'] == 'cancel':
+			#query.delete_message()
+			context.bot.edit_message_text(chat_id=channelChatInfo['chat_id'], message_id=channelChatInfo['message_id'], text="Canceled request.")
+			context.user_data["next_handler"] = ""
+			context.user_data["channelChatInfo"] = ""
+			return
+
+		#query.delete_message()
+		context.bot.edit_message_text(chat_id=channelChatInfo['chat_id'], message_id=channelChatInfo['message_id'], text=f"Prepairing backup: \'{channelChatInfo['ytLinkIdClean']}\' ⏳\n\nPriority: {channelChatInfo['priority']}\n\nChannel name:\n[ Type ChannelName | 'Cancel' to stop ]")
 		
 		context.user_data["next_handler"] = 'channel_name'
 		context.user_data["channelChatInfo"] = channelChatInfo
@@ -259,8 +266,9 @@ def link(update, context):
 				functions.addAccountData(channelChatInfo['channel_name'], channelChatInfo['channel_id'], channelChatInfo['priority'])
 				context.bot.edit_message_text(chat_id=channelChatInfo['chat_id'], message_id=channelChatInfo['message_id'], text=f"Added: {channelChatInfo['channel_name']} ✅")
 			else:
-				functions.msgHost(f"User '{name}' just requested to backup channel: https://youtube.com/channel/{channelChatInfo['channel_id']} " + "{" + f" 'priority': '{channelChatInfo['priority']}', 'channel_name': '{channelChatInfo['channel_name']}' " + "}" + "\n\nAdd with messaging the link back")
-				context.bot.edit_message_text(chat_id=channelChatInfo['chat_id'], message_id=channelChatInfo['message_id'], text=f"Added: {channelChatInfo['channel_name']} ⏳")
+				functions.msgHost(f"User '{name}'\njust requested to backup channel: " + "{" + f" 'priority': '{channelChatInfo['priority']}', 'name': '{channelChatInfo['channel_name']}' " + "}" + "\n\nAdd with messaging the link back")
+				functions.msgHost(f"https://youtube.com/channel/{channelChatInfo['channel_id']}")
+				context.bot.edit_message_text(chat_id=channelChatInfo['chat_id'], message_id=channelChatInfo['message_id'], text=f"Requested: {channelChatInfo['channel_name']} ⏳")
 	
 	# Handle other messages as usual
 	else:
@@ -349,9 +357,12 @@ def link(update, context):
 						convertedChannelId = ytLinkId[8:]
 					else:
 						message = context.bot.send_message(chat_id=chat_id, text=f"Getting facts for: \'{ytLinkIdClean}\'")
-						convertedChannelId = functions.getChannelId(ytLinkId)
+						succes, convertedChannelId = functions.getChannelId(ytLinkId)
+						if succes is False:
+							context.bot.edit_message_text(chat_id=chat_id, message_id=message.message_id, text=f"ERROR 404, Cant find channel: \'{ytLinkIdClean}\' ❌")
+							return
 
-					for (name, id, priority) in functions.getData('account', f'WHERE id=\"{convertedChannelId}\"'):
+					for (name, id, priority, pullError) in functions.getData('account', f'WHERE id=\"{convertedChannelId}\"'):
 						if message:
 							context.bot.edit_message_text(chat_id=chat_id, message_id=message.message_id, text=f"Already backing up channel: \'{name}\' ✅")
 						else:
@@ -366,10 +377,10 @@ def link(update, context):
 			
 					
 					#context.bot.edit_message_text(chat_id=chat_id, text=f"Prepairing to backup: \'{ytLinkIdClean}\' ⏳", reply_markup=reply_markup)
-					keyboard = [[InlineKeyboardButton("1 (fastest)", callback_data='1'),InlineKeyboardButton("2 (avg)", callback_data='2'),InlineKeyboardButton("3 (slowest)", callback_data='3')]]
+					keyboard = [[InlineKeyboardButton("1 (fast)", callback_data='1'),InlineKeyboardButton("2 (avg)", callback_data='2'),InlineKeyboardButton("3 (slow)", callback_data='3'),InlineKeyboardButton("Cancel", callback_data='cancel')]]
 					reply_markup = InlineKeyboardMarkup(keyboard)
 
-					update.message.reply_text(f"assign a 'priority' value?", reply_markup=reply_markup)
+					context.bot.edit_message_text(chat_id=chat_id, message_id=message.message_id, text=f"Prepairing backup: \'{ytLinkIdClean}\' ⏳\n\nPriority: ", reply_markup=reply_markup)
 					context.user_data["next_handler"] = "priority"
 					context.user_data["channelChatInfo"] = {'message_id': f'{message.message_id}', 'chat_id': f'{chat_id}', 'channel_id': f'{convertedChannelId}', 'ytLinkIdClean': f'{ytLinkIdClean}'}
 					return

@@ -30,26 +30,25 @@ if args.time:
 	print(f"\n{functions.coloursB['white']}Type pull:{functions.colours['reset']} {functions.colourPriority(requiredPriority)}•{functions.colours['reset']}\n")
 	
 	requiredPriority += 1 # Making the code above more human readable
-	statement = f"WHERE priority < {requiredPriority}"
+	statement = f"WHERE priority < {requiredPriority} ORDER BY title ASC;"
 else:
-	statement = 'ALL'
+	statement = 'ORDER BY title ASC;'
 
 ## Flags end.
 
-for (channelTitle, id, priority) in functions.getData("account", statement):
+for (channelTitle, id, priority, pullError) in functions.getData("account", statement):
 
 	# Creating the prompt with corosponding colour
 	print(f"{functions.colourPriority(priority)}•{functions.colours['reset']} {functions.coloursB['white']}{channelTitle}:{functions.colours['reset']}")
 
 	# Getting all the videos of current youtube channel in 'account' table
-	videos = scrapetube.get_channel(id)	
+	videos = scrapetube.get_channel(id)
 
+	forLoopRan = False
 	for video in videos:
-		vidId = video['videoId']
-		if video == '':
-			print(f"{functions.coloursB['red']}NO VIDEOS FOUND{functions.colours['reset']}")
-			continue
+		forLoopRan = True
 
+		vidId = video['videoId']
 		videoTitle = video['title']['runs'][0]['text']
 		print(videoTitle)
 
@@ -132,6 +131,11 @@ for (channelTitle, id, priority) in functions.getData("account", statement):
 
 				if functions.subCheck(channelTitle, filename, videoExtention):
 					functions.chData('content', vidId, 'subtitles', 1)
+
+	if forLoopRan is False:
+		print(f"{functions.coloursB['red']}NO VIDEOS FOUND{functions.colours['reset']}\n")
+		if pullError == 0: # First time detecting channel as 'empty'
+			functions.chData('account', id, 'pullerror', 1)
 
 print(f"{functions.coloursB['white']}{totalRecordsAdded}{functions.colours['reset']} Records inserted.")
 if totalRecordsSkipped:

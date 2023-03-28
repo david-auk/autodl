@@ -57,6 +57,9 @@ myTables = {
 		'priority': {
 			'type': 'int(11)'
 		}
+		'pullerror' {
+			'type': 'int(11)'
+		}
 	},
 	'content': {
 		'title': {

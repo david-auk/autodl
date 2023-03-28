@@ -298,7 +298,7 @@ def filenameFriendly(srtValue):
 	return filename
 
 # For making a dir in rootdownload when a python download request has come in
-def accNameFriendly(input_str):
+def accNameFriendly(srtValue):
 	# Split the input string into a list of words
 	srtValue = srtValue.lower()
 	words = srtValue.split()
