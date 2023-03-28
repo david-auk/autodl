@@ -53,6 +53,16 @@ mydb = database.connect(
 	database=secret.mariadb['connection']['database']
 )
 
+class MyLoggerQuiet(object):
+	def debug(self, msg):
+		pass
+
+	def warning(self, msg):
+		pass
+
+	def error(self, msg):
+		pass
+
 # Function for adding instances to the account table
 def addAccountData(title, channelid, priority):
 	mydb.reconnect()
@@ -83,7 +93,7 @@ def addContentData(title, id, childfrom, nr, videopath, extention, subtitles, up
 	mydb.reconnect()
 	addContentDataCursor = mydb.cursor(buffered=True)
 	try:
-		table = 'content'
+		table = 'content'						#  title, 								id, 							childfrom, 		nr,							 videopath, 		extention, 		subtitles,	 uploaddate, 		downloaddate, 		deleteddate,	 deleted,	 deletedtype, 		requestuser
 		statement = f"INSERT INTO {table} VALUES (\"{mydb.converter.escape(title)}\", \"{id}\", \"{mydb.converter.escape(childfrom)}\", {nr}, \"{mydb.converter.escape(videopath)}\", \"{extention}\", {subtitles}, \"{uploaddate}\", \"{downloaddate}\", \"{deleteddate}\", {deleted}, \"{deletedtype}\", \"{requestuser}\")"
 		addContentDataCursor.execute(statement)
 		mydb.commit()
@@ -288,7 +298,7 @@ def filenameFriendly(srtValue):
 	return filename
 
 # For making a dir in rootdownload when a python download request has come in
-def accNameFriendly(srtValue):
+def accNameFriendly(input_str):
 	# Split the input string into a list of words
 	srtValue = srtValue.lower()
 	words = srtValue.split()
@@ -299,7 +309,6 @@ def accNameFriendly(srtValue):
 	modifiedString = re.sub(r'[^a-zA-Z0-9\-]+', '', modifiedString)
 
 	return modifiedString
-
 
 # Function for saving facts of a video to a dictionary
 def getFacts(vidId):
@@ -375,11 +384,16 @@ def getChannelId(ytChannelId):
 		'playlist_items': '1',
 		'match_filter': 'channel',
 		'extract_flat': True,
+		'logger': MyLoggerQuiet()
 	}
-	with YoutubeDL(ydl_opts) as ydl:
-		result = ydl.extract_info(f"https://youtube.com/{ytChannelId}", download=False)
-		if result:
-			return result.get('channel_id')
+	try:
+		with YoutubeDL(ydl_opts) as ydl:
+			result = ydl.extract_info(f"https://youtube.com/{ytChannelId}", download=False)
+			if result:
+				return True, result.get('channel_id')
+	except Exception as e:
+		return False, 'N/A'
+		
 
 # 
 def subCheck(channelTitle, filename, ext):
@@ -398,7 +412,7 @@ def subCheck(channelTitle, filename, ext):
 	return has_subtitles
 
 # Function for checking if the vidId is still online
-def avalibilityCheck(vidId):
+def availabilityCheck(vidId):
 
 	# Create full link
 	url = f'https://www.youtube.com/watch?v={vidId}'
