@@ -1,6 +1,11 @@
 import functions
 import shutil
 import datetime
+import threading
+import time
+
+runInBackround = True
+sleepTime = 0.03
 
 originalTerminalWidth = shutil.get_terminal_size().columns
 
@@ -10,17 +15,8 @@ formattedDate = currentDate.strftime("%d-%m-%Y")
 
 totalRows = functions.countData("content", 'ALL')
 
-currentRequestNum = 0
-for (title, id, childfrom, nr, videopath, extention, subtitles, uploaddate, downloaddate, deleteddate, deleted, deletedtype, requestuser) in functions.getData('content', 'ORDER BY deleted DESC'):
-	isAvalible, avalibilityType, striker = functions.avalibilityCheck(id)
-
-	currentRequestNum += 1
-
-	count = len(f'{currentRequestNum}/{totalRows}') + len(f'{100/totalRows*currentRequestNum:.2f}%')
-	terminalWidth = (originalTerminalWidth - count)
-
-	print(f"{functions.coloursB['white']}{100/totalRows*currentRequestNum:.2f}%{functions.colours['reset']}\033[{terminalWidth}C{currentRequestNum}/{totalRows}", end = '\r')
-
+def checkingAndInforming(title, id, childfrom, nr, videopath, extention, subtitles, uploaddate, downloaddate, deleteddate, deleted, deletedtype, requestuser):
+	isAvalible, avalibilityType, striker = functions.availabilityCheck(id)
 	if isAvalible is False:
 		if avalibilityType == 'Deleted' or avalibilityType == 'Private':
 			print(f"{functions.coloursB['red']}{avalibilityType.upper()}{functions.colours['reset']} - {id} | {childfrom} | {title}")
@@ -44,7 +40,6 @@ for (title, id, childfrom, nr, videopath, extention, subtitles, uploaddate, down
 					else:
 						if avalibilityType == 'Striked':
 							functions.msgAll(f"{title} from \'{childfrom}\' just got Striked by \'{striker}\'")
-
 	# If the content is avalible
 	else:
 		if deleted == 1: # Video status just got back online
@@ -54,3 +49,35 @@ for (title, id, childfrom, nr, videopath, extention, subtitles, uploaddate, down
 			functions.chData('content', id, 'deletedtype', 'public')
 			functions.chData('content', id, 'deleteddate', formattedDate)
 			functions.msgAll(f"{title}. from \'{childfrom}\' just got put back Online from {deletedtype}\nhttps://www.youtube.com/watch?v={id}")
+
+threads = []
+currentRequestNum = 0
+for (title, id, childfrom, nr, videopath, extention, subtitles, uploaddate, downloaddate, deleteddate, deleted, deletedtype, requestuser) in functions.getData('content', 'ORDER BY deleted DESC'):
+
+ 	currentRequestNum += 1
+
+ 	count = len(f'{currentRequestNum}/{totalRows}') + len(f'{100/totalRows*currentRequestNum:.2f}%')
+ 	terminalWidth = (originalTerminalWidth - count)
+
+ 	print(f"{functions.coloursB['white']}{100/totalRows*currentRequestNum:.2f}%{functions.colours['reset']}\033[{terminalWidth}C{currentRequestNum}/{totalRows}", end = '\r')
+
+ 	if runInBackround is True:
+ 		t = threading.Thread(target=checkingAndInforming, args=(title, id, childfrom, nr, videopath, extention, subtitles, uploaddate, downloaddate, deleteddate, deleted, deletedtype, requestuser))
+ 		threads.append(t)
+ 		t.start()
+ 		time.sleep(0.03)
+ 	elif runInBackround is False:
+ 		checkingAndInforming(title, id, childfrom, nr, videopath, extention, subtitles, uploaddate, downloaddate, deleteddate, deleted, deletedtype, requestuser)
+ 	else:
+ 		print("Please enter a 'runInBackround' value")
+ 		break
+
+if runInBackround:
+	currentRequestNum = 0
+	for t in threads:
+		currentRequestNum += 1
+		count = len(f'Cleaning up sessions') + len(f'{currentRequestNum}/{totalRows}')
+		terminalWidth = (originalTerminalWidth - count)
+		print(f"Cleaning up sessions\033[{terminalWidth}C{currentRequestNum}/{totalRows}", end = '\r')
+		time.sleep(0.001)
+		t.join()
