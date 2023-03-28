@@ -3,9 +3,16 @@ import shutil
 import datetime
 import threading
 import time
+import argparse
 
-runInBackround = True
-sleepTime = 0.03
+# Create the parser object
+parser = argparse.ArgumentParser(description='A python script to check the availability of all the download videos')
+parser.add_argument('-b', '--background', action='store_true', default=False, help='Run in the background (is more resource heavy)')
+parser.add_argument('-t', '--sleeptime', type=float, default=0.1, help='Set how long the wait time before next request, default: 0.01')
+args = parser.parse_args()
+
+runInBackround = args.background
+sleepTime = args.sleeptime
 
 originalTerminalWidth = shutil.get_terminal_size().columns
 
@@ -54,30 +61,24 @@ threads = []
 currentRequestNum = 0
 for (title, id, childfrom, nr, videopath, extention, subtitles, uploaddate, downloaddate, deleteddate, deleted, deletedtype, requestuser) in functions.getData('content', 'ORDER BY deleted DESC'):
 
- 	currentRequestNum += 1
+	currentRequestNum += 1
 
- 	count = len(f'{currentRequestNum}/{totalRows}') + len(f'{100/totalRows*currentRequestNum:.2f}%')
- 	terminalWidth = (originalTerminalWidth - count)
+	count = len(f'{currentRequestNum}/{totalRows}') + len(f'{100/totalRows*currentRequestNum:.2f}%')
+	terminalWidth = (originalTerminalWidth - count)
 
- 	print(f"{functions.coloursB['white']}{100/totalRows*currentRequestNum:.2f}%{functions.colours['reset']}\033[{terminalWidth}C{currentRequestNum}/{totalRows}", end = '\r')
+	print(f"{functions.coloursB['white']}{100/totalRows*currentRequestNum:.2f}%{functions.colours['reset']}\033[{terminalWidth}C{currentRequestNum}/{totalRows}", end = '\r')
 
- 	if runInBackround is True:
- 		t = threading.Thread(target=checkingAndInforming, args=(title, id, childfrom, nr, videopath, extention, subtitles, uploaddate, downloaddate, deleteddate, deleted, deletedtype, requestuser))
- 		threads.append(t)
- 		t.start()
- 		time.sleep(0.03)
- 	elif runInBackround is False:
- 		checkingAndInforming(title, id, childfrom, nr, videopath, extention, subtitles, uploaddate, downloaddate, deleteddate, deleted, deletedtype, requestuser)
- 	else:
- 		print("Please enter a 'runInBackround' value")
- 		break
+	if runInBackround is True:
+		t = threading.Thread(target=checkingAndInforming, args=(title, id, childfrom, nr, videopath, extention, subtitles, uploaddate, downloaddate, deleteddate, deleted, deletedtype, requestuser))
+		threads.append(t)
+		t.start()
+		time.sleep(sleepTime)
+	elif runInBackround is False:
+		checkingAndInforming(title, id, childfrom, nr, videopath, extention, subtitles, uploaddate, downloaddate, deleteddate, deleted, deletedtype, requestuser)
+	else:
+		print("Please enter a 'runInBackround' value")
+		break
 
 if runInBackround:
-	currentRequestNum = 0
 	for t in threads:
-		currentRequestNum += 1
-		count = len(f'Cleaning up sessions') + len(f'{currentRequestNum}/{totalRows}')
-		terminalWidth = (originalTerminalWidth - count)
-		print(f"Cleaning up sessions\033[{terminalWidth}C{currentRequestNum}/{totalRows}", end = '\r')
-		time.sleep(0.001)
 		t.join()
