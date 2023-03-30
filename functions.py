@@ -8,7 +8,8 @@ import subprocess
 import os
 import re
 
-from yt_dlp import YoutubeDL
+from telegram import Bot, ParseMode
+from yt_dlp import YoutubeDL, utils
 
 # Define coulors
 colours = {
@@ -163,13 +164,23 @@ def getMaxDataValue(table, column):
 		maxValue = x[0]
 	return maxValue
 
+def escapeMarkdown(text):
+	escape_list = ['*', '_', '`']
+	formatedQuote = ''.join(['\\'+c if c in escape_list else c for c in text])
+	return formatedQuote
+
 # Function that messages the 'Host' using credentials from secret.py
 def msgHost(query):
 	telegramToken = secret.telegram['credentials']['token']
-	formatedQuote = urllib.parse.quote(query)
 	for x in getData("chatid", 'WHERE priority=\"1\"'):
 		hostChatId = x[1]
-	requests.get(f"https://api.telegram.org/bot{telegramToken}/sendMessage?chat_id={hostChatId}&text={formatedQuote}")
+
+	escape_list = ['>', '-', ']', '[', '.', '}', '{', '|', ')', '(', '#', '!', '=', '+']
+	formatedQuote = ''.join(['\\'+c if c in escape_list else c for c in query])
+
+	Bot(token=secret.telegram['credentials']['token']).send_message(chat_id=hostChatId, text=formatedQuote, parse_mode=ParseMode.MARKDOWN_V2)
+#	formatedQuote = urllib.parse.quote(query)
+#	requests.get(f"https://api.telegram.org/bot{telegramToken}/sendMessage?chat_id={hostChatId}&text={formatedQuote}")
 
 # Function that messages every chatid from secret.py
 def msgAll(query):
@@ -204,9 +215,6 @@ def downloadVid(vidId, channelTitle, filename):
 		except Exception as e:
 			print(f"Download failed: {e}")
 			tries += 1
-		if success:
-			if os.path.exists(f"{rootDownloadDir}/{channelTitle}/{filename}*.vst"):
-				pass #delete {rootDownloadDir}/{channelTitle}/{filename}*.vst
 	return success, e
 
 # Function for saving thumbnail
@@ -352,6 +360,31 @@ def getFacts(vidId):
 	uploadDate = f"{day}-{month}-{year}"
 	return success, info, uploadDate
 
+def getChannelFacts(link):
+	link = f"https://youtube.com/channel/{link}"
+	ydl_opts = {
+		'skip_download': True,
+		'quiet': True,
+		'no_warnings': True,
+		'playlist_items': '1',
+		'match_filter': 'channel',
+		'extract_flat': True,
+		'logger': MyLoggerQuiet()
+	}
+	with YoutubeDL(ydl_opts) as ydl:
+		try:
+			ydl.extract_info(link, download=False)
+			return False
+		except utils.DownloadError as e:
+			message = e
+			if "This channel has no uploads" in str(e):
+				message = "no_uploads"
+			elif "This account has been terminated" in str(e):
+				message = "terminated"
+			return message
+		else:
+			return "else"
+
 def isYtLink(link):
 	"""Extracts the YouTube video ID and type (video or channel) from a URL string."""
 	video_pattern = r"(?:https?:\/\/)?(?:www\.)?(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=))([\w\-]{11})(?:\S+)?"
@@ -374,6 +407,14 @@ def isYtLink(link):
 		return (True, "channel", f"r/{channel_match3.group(1)}", channel_match3.group(1))
 	else:
 		return (False, 'N/A', 'N/A', 'N/A')
+
+def cleanChannelLink(link):
+	"""Extracts the YouTube video ID and type (video or channel) from a URL string."""
+	channel_pattern = r"(?:https?:\/\/)?(?:www\.)?youtube\.com\/(?:c\/|channel\/)([\w\-]+)(?:\S+)?"
+
+	channel_match = re.match(channel_pattern, link)
+	
+	return channel_match.group(1)
 
 # Function for getting the id of chosen type
 def getChannelId(ytChannelId):

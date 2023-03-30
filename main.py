@@ -3,6 +3,7 @@ import argparse
 import scrapetube
 import datetime
 import functions
+import random
 
 ## Basic definition start.
 
@@ -36,6 +37,11 @@ else:
 
 ## Flags end.
 
+
+#functions
+
+#quit()
+
 for (channelTitle, id, priority, pullError) in functions.getData("account", statement):
 
 	# Creating the prompt with corosponding colour
@@ -54,7 +60,7 @@ for (channelTitle, id, priority, pullError) in functions.getData("account", stat
 
 		# Checking if the entry exists in database
 		entryExists = False
-		for x in functions.getData('content', f'WHERE id = \"{vidId}\"'):
+		for x in functions.getData('content', f'WHERE id = \"{vidId}\" AND requestuser=\"{requestuser}\"'):
 			entryExists = True
 
 		if entryExists:
@@ -64,6 +70,15 @@ for (channelTitle, id, priority, pullError) in functions.getData("account", stat
 			break #to next account
 			
 		else:
+
+			# Checking if video has been downloaded directly by user
+			userRequested = False
+			for (title, id, childfrom, nr, videopath, extention, subtitles, uploaddate, downloaddate, deleteddate, deleted, deletedtype, writtenrequestuser) in functions.getData('content', f'WHERE id=\"{vidId}\"'):
+				print(f"[{functions.coloursB['cyan']}√{functions.colours['reset']}] https://www.youtube.com/watch?v={vidId}\n")
+				userRequested = True
+
+			if userRequested:
+				continue # The previous video could hypothetically not be downloaded 
 
 			# Checking if video is in premere
 			isInPremiere = False
@@ -114,7 +129,10 @@ for (channelTitle, id, priority, pullError) in functions.getData("account", stat
 					for x in functions.getData('content', f'WHERE id=\"{vidId}\"'):
 						entryExists = True
 
-					if entryExists is False:
+					if entryExists:
+						print("Duplicate item, skipping")
+
+					else:
 
 						currentNum = functions.getMaxDataValue('content', 'nr') + 1
 
@@ -133,9 +151,28 @@ for (channelTitle, id, priority, pullError) in functions.getData("account", stat
 					functions.chData('content', vidId, 'subtitles', 1)
 
 	if forLoopRan is False:
-		print(f"{functions.coloursB['red']}NO VIDEOS FOUND{functions.colours['reset']}\n")
-		if pullError == 0: # First time detecting channel as 'empty'
-			functions.chData('account', id, 'pullerror', 1)
+		if pullError == 'N/A':
+			currentChannelFacts = functions.getChannelFacts(id)
+		else:
+			if random.randint(1,6) == 1: # There is a one in six chance the loop will check new facts (it takes some time)
+				print(f"{functions.coloursB['green']}Lucky{functions.colours['reset']} {functions.coloursB['white']}1/6{functions.colours['reset']}, refreshing channel")
+				currentChannelFacts = functions.getChannelFacts(id)
+			else:
+				currentChannelFacts = pullError # Dont check if the account status is changed
+
+		if currentChannelFacts != pullError: # First time detecting channel as 'empty'
+			if currentChannelFacts == 'terminated':
+				print(f"{functions.coloursB['red']}CHANNEL TERMINATED{functions.colours['reset']}\n[{functions.coloursB['red']}X{functions.colours['reset']}] https://youtube.com/channel/{id}\n")
+				functions.msgHost(functions.escapeMarkdown(f"{channelTitle} gave a pull error: 'Terminated'\n\nhttps://youtube.com/channel/{id}"))
+				functions.chData('account', id, 'pullerror', 'terminated')
+			elif currentChannelFacts == 'no_uploads':
+				print(f"{functions.coloursB['red']}NO VIDEOS FOUND{functions.colours['reset']}\n[{functions.coloursB['red']}X{functions.colours['reset']}] https://youtube.com/channel/{id}\n")
+				functions.msgHost(f"{functions.escapeMarkdown(channelTitle)} gave a pull error: 'No Uploads'\n\nhttps://youtube.com/channel/{id}")
+				functions.chData('account', id, 'pullerror', 'no_uploads')
+		elif pullError == 'no_uploads': # There still is no new uploaded video
+			print(f"{functions.coloursB['red']}NO VIDEOS FOUND{functions.colours['reset']}\n[{functions.coloursB['red']}X{functions.colours['reset']}] https://youtube.com/channel/{id}\n")
+		elif pullError == 'terminated': # Channel is still terminated
+			print(f"{functions.coloursB['red']}CHANNEL TERMINATED{functions.colours['reset']}\n[{functions.coloursB['red']}X{functions.colours['reset']}] https://youtube.com/channel/{id}\n")
 
 print(f"{functions.coloursB['white']}{totalRecordsAdded}{functions.colours['reset']} Records inserted.")
 if totalRecordsSkipped:

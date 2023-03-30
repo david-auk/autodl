@@ -58,7 +58,7 @@ myTables = {
 			'type': 'int(11)'
 		}
 		'pullerror' {
-			'type': 'int(11)'
+			'type': 'text'
 		}
 	},
 	'content': {
