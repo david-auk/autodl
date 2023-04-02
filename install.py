@@ -56,8 +56,8 @@ myTables = {
 		},
 		'priority': {
 			'type': 'int(11)'
-		}
-		'pullerror' {
+		},
+		'pullerror': {
 			'type': 'text'
 		}
 	},
@@ -70,7 +70,7 @@ myTables = {
 		},
 		'childfrom': {
 			'type': 'text'
-		}
+		},
 		'videopath': {
 			'type': 'text'
 		},
@@ -199,4 +199,4 @@ for key in telegramSql:
 			else:
 				functions.addChatIdData('N/A', telegramSql[key][sub_key]['id'], telegramSql[key][sub_key]['priority'], 'N/A')
 
-functions.addChatIdDataCursor.close()
+print(f'\n{functions.coloursB["white"]}Instalation Complete!{functions.colours["reset"]}\n')

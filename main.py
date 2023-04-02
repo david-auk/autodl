@@ -10,7 +10,7 @@ import random
 requestuser = "scanner" # This will be the default value of the 'reqester' field in SQL
 totalRecordsAdded = 0 # So we can count upwards	
 totalRecordsSkipped = 0 # So we can count upwards
-skipDownload = False
+skipDownload, skippedOnError = False, False
 
 ## Basic definition end.
 
@@ -36,11 +36,6 @@ else:
 	statement = 'ORDER BY title ASC;'
 
 ## Flags end.
-
-
-#functions
-
-#quit()
 
 for (channelTitle, id, priority, pullError) in functions.getData("account", statement):
 
@@ -78,7 +73,7 @@ for (channelTitle, id, priority, pullError) in functions.getData("account", stat
 				userRequested = True
 
 			if userRequested:
-				continue # The previous video could hypothetically not be downloaded 
+				continue # The video underneath could hypothetically not be downloaded 
 
 			# Checking if video is in premere
 			isInPremiere = False
@@ -102,9 +97,9 @@ for (channelTitle, id, priority, pullError) in functions.getData("account", stat
 
 			if success is False:
 				print(f"[{functions.coloursB['yellow']}Skipping{functions.colours['reset']}]\n")
-				functions.msgHost(f"Skipped https://www.youtube.com/watch?v={vidId}")
+				functions.msgHost(f"Skipped https://www.youtube.com/watch?v={vidId}", False)
 				totalRecordsSkipped += 1
-				continue
+				break
 
 			videoExtention = vidInfo['ext']
 
@@ -148,12 +143,18 @@ for (channelTitle, id, priority, pullError) in functions.getData("account", stat
 				else:
 
 					# Notify host downloading gives error
-					functions.msgHost(f"Downloading https://www.youtube.com/watch?v={vidId} from {channelTitle}\ngave ERROR: {failureType}")
+					functions.msgHost(f"Downloading https://www.youtube.com/watch?v={vidId} from {channelTitle}\ngave ERROR: {failureType}", False)
+					skippedOnError = True
+					break
 
 				if functions.subCheck(channelTitle, filename, videoExtention):
 					functions.chData('content', vidId, 'subtitles', 1)
 
-	if forLoopRan is False:
+	if skippedOnError:
+		skippedOnError = False
+		continue
+
+	elif forLoopRan is False:
 		if pullError == 'N/A':
 			currentChannelFacts = functions.getChannelFacts(id)
 		else:
@@ -166,11 +167,11 @@ for (channelTitle, id, priority, pullError) in functions.getData("account", stat
 		if currentChannelFacts != pullError: # First time detecting channel as 'empty'
 			if currentChannelFacts == 'terminated':
 				print(f"{functions.coloursB['red']}CHANNEL TERMINATED{functions.colours['reset']}\n[{functions.coloursB['red']}X{functions.colours['reset']}] https://youtube.com/channel/{id}\n")
-				functions.msgHost(functions.escapeMarkdown(f"{channelTitle} gave a pull error: 'Terminated'\n\nhttps://youtube.com/channel/{id}"))
+				functions.msgHost(functions.escapeMarkdown(f"{channelTitle} gave a pull error: 'Terminated'\n\nhttps://youtube.com/channel/{id}", True))
 				functions.chData('account', id, 'pullerror', 'terminated')
 			elif currentChannelFacts == 'no_uploads':
 				print(f"{functions.coloursB['red']}NO VIDEOS FOUND{functions.colours['reset']}\n[{functions.coloursB['red']}X{functions.colours['reset']}] https://youtube.com/channel/{id}\n")
-				functions.msgHost(f"{functions.escapeMarkdown(channelTitle)} gave a pull error: 'No Uploads'\n\nhttps://youtube.com/channel/{id}")
+				functions.msgHost(f"{functions.escapeMarkdown(channelTitle)} gave a pull error: 'No Uploads'\n\nhttps://youtube.com/channel/{id}", True)
 				functions.chData('account', id, 'pullerror', 'no_uploads')
 		elif pullError == 'no_uploads': # There still is no new uploaded video
 			print(f"{functions.coloursB['red']}NO VIDEOS FOUND{functions.colours['reset']}\n[{functions.coloursB['red']}X{functions.colours['reset']}] https://youtube.com/channel/{id}\n")

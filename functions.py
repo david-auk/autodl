@@ -10,6 +10,8 @@ import re
 
 from telegram import Bot, ParseMode
 from yt_dlp import YoutubeDL, utils
+from mysql.connector import conversion
+
 
 # Define coulors
 colours = {
@@ -51,7 +53,8 @@ mydb = database.connect(
 	host=secret.mariadb['connection']['host'],
 	user=secret.mariadb['credentials']['user'],
 	password=secret.mariadb['credentials']['password'],
-	database=secret.mariadb['connection']['database']
+	database=secret.mariadb['connection']['database'],
+	converter_class=conversion.MySQLConverter
 )
 
 class MyLoggerQuiet(object):
@@ -70,7 +73,8 @@ def addAccountData(title, channelid, priority):
 	addAccountDataCursor = mydb.cursor(buffered=True)
 	try:
 		table = 'account'
-		statement = "INSERT INTO account VALUES (\"{}\", \"{}\", \"{}\")".format(title,channelid,priority)
+		statement = f"INSERT INTO {table} VALUES (\"{title}\", \"{channelid}\", \"{priority}\", \"N/A\")"
+		print(statement)
 		addAccountDataCursor.execute(statement)
 		mydb.commit()
 		#print(addAccountDataCursor.rowcount, "record inserted.")
@@ -170,17 +174,18 @@ def escapeMarkdown(text):
 	return formatedQuote
 
 # Function that messages the 'Host' using credentials from secret.py
-def msgHost(query):
+def msgHost(query, usingMarkdown):
 	telegramToken = secret.telegram['credentials']['token']
 	for x in getData("chatid", 'WHERE priority=\"1\"'):
 		hostChatId = x[1]
 
-	escape_list = ['>', '-', ']', '[', '.', '}', '{', '|', ')', '(', '#', '!', '=', '+']
-	formatedQuote = ''.join(['\\'+c if c in escape_list else c for c in query])
-
-	Bot(token=secret.telegram['credentials']['token']).send_message(chat_id=hostChatId, text=formatedQuote, parse_mode=ParseMode.MARKDOWN_V2)
-#	formatedQuote = urllib.parse.quote(query)
-#	requests.get(f"https://api.telegram.org/bot{telegramToken}/sendMessage?chat_id={hostChatId}&text={formatedQuote}")
+	if usingMarkdown:
+		escape_list = ['>', '-', ']', '[', '.', '}', '{', '|', ')', '(', '#', '!', '=', '+']
+		formatedQuote = ''.join(['\\'+c if c in escape_list else c for c in query])
+		Bot(token=secret.telegram['credentials']['token']).send_message(chat_id=hostChatId, text=formatedQuote, parse_mode=ParseMode.MARKDOWN_V2)
+	else:
+		formatedQuote = urllib.parse.quote(query)
+		requests.get(f"https://api.telegram.org/bot{telegramToken}/sendMessage?chat_id={hostChatId}&text={formatedQuote}")
 
 # Function that messages every chatid from secret.py
 def msgAll(query):
@@ -211,11 +216,12 @@ def downloadVid(vidId, channelTitle, filename):
 			with YoutubeDL(ydl_opts) as ydl:
 				ydl.download([f'https://www.youtube.com/watch?v={vidId}'])
 			success = True
-			e = success
+			errorType = True
 		except Exception as e:
 			print(f"Download failed: {e}")
+			errorType = e
 			tries += 1
-	return success, e
+	return success, errorType
 
 # Function for saving thumbnail
 def downloadThumbnail(vidId, channelTitle, filename, secondLink):
@@ -263,7 +269,7 @@ def downloadThumbnail(vidId, channelTitle, filename, secondLink):
 	if success:
 		return success
 	else:
-		msgHost(f"ERROR: Could not download thumbnail, Account: \'{channelTitle}\", Url: \'https://www.youtube.com/watch?v={vidId}\'")
+		msgHost(f"ERROR: Could not download thumbnail, Account: \'{channelTitle}\", Url: \'https://www.youtube.com/watch?v={vidId}\'", False)
 		quit()
 
 # Function for writing description of video
