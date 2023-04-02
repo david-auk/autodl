@@ -10,6 +10,8 @@ import re
 
 from telegram import Bot, ParseMode
 from yt_dlp import YoutubeDL, utils
+from mysql.connector import conversion
+
 
 # Define coulors
 colours = {
