@@ -200,4 +200,4 @@ for key in telegramSql:
 				print(f"functions.addChatIdData('N/A', {telegramSql[key][sub_key]['id']}, {telegramSql[key][sub_key]['priority']}, 'N/A')")
 				functions.addChatIdData('N/A', telegramSql[key][sub_key]['id'], telegramSql[key][sub_key]['priority'], 'N/A')
 
-print(f'\n{functions.coloursB['white']}Instalation Complete!{functions.colours['reset']}\n')
+print(f'\n{functions.coloursB["white"]}Instalation Complete!{functions.colours["reset"]}\n')
