@@ -53,7 +53,8 @@ mydb = database.connect(
 	host=secret.mariadb['connection']['host'],
 	user=secret.mariadb['credentials']['user'],
 	password=secret.mariadb['credentials']['password'],
-	database=secret.mariadb['connection']['database']
+	database=secret.mariadb['connection']['database'],
+	converter_class=conversion.MySQLConverter
 )
 
 class MyLoggerQuiet(object):
