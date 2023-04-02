@@ -70,9 +70,6 @@ myTables = {
 		},
 		'childfrom': {
 			'type': 'text'
-		},
-		'nr': {
-			'type': 'int'
 		}
 		'videopath': {
 			'type': 'text'

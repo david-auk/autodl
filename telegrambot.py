@@ -100,7 +100,7 @@ def ask_latest(update, context):
 
 				if totalRows:
 					totalRows += 1
-					for (title, id, childfrom, nr, videopath, extention, subtitles, uploaddate, downloaddate, deleteddate, deleted, deletedtype, requestuser) in functions.getData(table, statment):
+					for (title, id, childfrom, videopath, extention, subtitles, uploaddate, downloaddate, deleteddate, deleted, deletedtype, requestuser) in functions.getData(table, statment):
 						formattedDate = functions.getDate(str(downloaddate))
 						totalRows -= 1
 						space = " " * (maxLen - len(str(totalRows)))
@@ -210,7 +210,7 @@ def buttonResolver(update, context):
 
 		if totalRows:
 			totalRows += 1
-			for (title, id, childfrom, nr, videopath, extention, subtitles, uploaddate, downloaddate, deleteddate, deleted, deletedtype, requestuser) in functions.getData(table, statment):
+			for (title, id, childfrom, videopath, extention, subtitles, uploaddate, downloaddate, deleteddate, deleted, deletedtype, requestuser) in functions.getData(table, statment):
 				totalRows -= 1
 				space = " " * (maxLen - len(str(totalRows)))
 				formattedDate = functions.getDate(str(downloaddate))
@@ -406,10 +406,9 @@ def link(update, context):
 					context.bot.edit_message_text(chat_id=chat_id, message_id=message.message_id, text=f"Getting facts for: \'{ytLinkId}\'\n\nFacts retreved. ☑️\n\nDownloaded thumbnail. ☑️\n\nWriten description. ☑️\n\nDownloaded video. ❌ ERROR-type: {failureType}\nHost contacted.")
 					return
 
-				currentNum = functions.countData("content", 'ALL')
 				downloaddate = datetime.now().strftime('%Y%m%d%H%M%S')
 
-				functions.addContentData(videoTitle, ytLinkId, channelTitle, currentNum, filename, videoExtention, 0, uploadDate, downloaddate, 'N/A', 0, 'Public', chat_id)
+				functions.addContentData(videoTitle, ytLinkId, channelTitle, filename, videoExtention, 0, uploadDate, downloaddate, 0, 0, 'Public', chat_id)
 				
 				context.bot.delete_message(chat_id=chat_id, message_id=message.message_id)
 				context.bot.send_message(chat_id=chat_id, text=f"Downloaded: \'{ytLinkId}\' ✅")

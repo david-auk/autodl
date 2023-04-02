@@ -21,7 +21,7 @@ formattedDate = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
 
 totalRows = functions.countData("content", 'ALL')
 
-def checkingAndInforming(title, id, childfrom, nr, videopath, extention, subtitles, uploaddate, downloaddate, deleteddate, deleted, deletedtype, requestuser):
+def checkingAndInforming(title, id, childfrom, videopath, extention, subtitles, uploaddate, downloaddate, deleteddate, deleted, deletedtype, requestuser):
 	isAvalible, avalibilityType, striker = functions.availabilityCheck(id)
 	if isAvalible is False:
 		if avalibilityType == 'Deleted' or avalibilityType == 'Private':
@@ -52,13 +52,13 @@ def checkingAndInforming(title, id, childfrom, nr, videopath, extention, subtitl
 			print(f"{functions.coloursB['green']}{avalibilityType.upper()}{functions.colours['reset']} - {id} | {childfrom} | {title}")
 			print(f'  ^ The first time detecting this as {avalibilityType} (Again)\n')
 			functions.chData('content', id, 'deleted', 0)
-			functions.chData('content', id, 'deletedtype', 'public')
+			functions.chData('content', id, 'deletedtype', 'Public')
 			functions.chData('content', id, 'deleteddate', formattedDate)
 			functions.msgAll(f"{title}. from \'{childfrom}\' just got put back Online from {deletedtype}\nhttps://www.youtube.com/watch?v={id}")
 
 threads = []
 currentRequestNum = 0
-for (title, id, childfrom, nr, videopath, extention, subtitles, uploaddate, downloaddate, deleteddate, deleted, deletedtype, requestuser) in functions.getData('content', 'ORDER BY deleted DESC'):
+for (title, id, childfrom, videopath, extention, subtitles, uploaddate, downloaddate, deleteddate, deleted, deletedtype, requestuser) in functions.getData('content', 'ORDER BY deleted DESC'):
 
 	currentRequestNum += 1
 
@@ -68,12 +68,12 @@ for (title, id, childfrom, nr, videopath, extention, subtitles, uploaddate, down
 	print(f"{functions.coloursB['white']}{100/totalRows*currentRequestNum:.2f}%{functions.colours['reset']}\033[{terminalWidth}C{currentRequestNum}/{totalRows}", end = '\r')
 
 	if runInBackround is True:
-		t = threading.Thread(target=checkingAndInforming, args=(title, id, childfrom, nr, videopath, extention, subtitles, uploaddate, downloaddate, deleteddate, deleted, deletedtype, requestuser))
+		t = threading.Thread(target=checkingAndInforming, args=(title, id, childfrom, videopath, extention, subtitles, uploaddate, downloaddate, deleteddate, deleted, deletedtype, requestuser))
 		threads.append(t)
 		t.start()
 		time.sleep(sleepTime)
 	elif runInBackround is False:
-		checkingAndInforming(title, id, childfrom, nr, videopath, extention, subtitles, uploaddate, downloaddate, deleteddate, deleted, deletedtype, requestuser)
+		checkingAndInforming(title, id, childfrom, videopath, extention, subtitles, uploaddate, downloaddate, deleteddate, deleted, deletedtype, requestuser)
 	else:
 		print("Please enter a 'runInBackround' value")
 		break

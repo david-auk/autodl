@@ -73,7 +73,7 @@ for (channelTitle, id, priority, pullError) in functions.getData("account", stat
 
 			# Checking if video has been downloaded directly by user
 			userRequested = False
-			for (title, id, childfrom, nr, videopath, extention, subtitles, uploaddate, downloaddate, deleteddate, deleted, deletedtype, writtenrequestuser) in functions.getData('content', f'WHERE id=\"{vidId}\"'):
+			for (title, id, childfrom, videopath, extention, subtitles, uploaddate, downloaddate, deleteddate, deleted, deletedtype, writtenrequestuser) in functions.getData('content', f'WHERE id=\"{vidId}\"'):
 				print(f"[{functions.coloursB['cyan']}√{functions.colours['reset']}] https://www.youtube.com/watch?v={vidId}\n")
 				userRequested = True
 
@@ -139,14 +139,11 @@ for (channelTitle, id, priority, pullError) in functions.getData("account", stat
 
 					else:
 
-						currentNum = functions.getMaxDataValue('content', 'nr') + 1
-
 						# Getting the current date in desired format
 						downloaddate = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
 
 						# Adding new entry to 'content' table
-						#totalRecordsAdded += functions.addContentData(videoTitle, vidId, channelTitle, currentNum, filename, videoExtention, 0, int(uploadDate), int(downloaddate), 'N/A', 0, 'Public', requestuser)
-						functions.addContentData(videoTitle, vidId, channelTitle, currentNum, filename, videoExtention, 0, uploadDate, downloaddate, 0, 0, 'Public', requestuser)
+						totalRecordsAdded += functions.addContentData(videoTitle, vidId, channelTitle, filename, videoExtention, 0, int(uploadDate), int(downloaddate), 0, 0, 'Public', requestuser)
 			
 				else:
 

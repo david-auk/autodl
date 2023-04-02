@@ -90,12 +90,12 @@ def addChatIdData(name, id, priority, authenticated):
 		print(f"Error adding entry from {mydb.database}[{table}]: {e}")
 
 # Function for adding instances to the content table
-def addContentData(title, id, childfrom, nr, videopath, extention, subtitles, uploaddate, downloaddate, deleteddate, deleted, deletedtype, requestuser):
+def addContentData(title, id, childfrom, videopath, extention, subtitles, uploaddate, downloaddate, deleteddate, deleted, deletedtype, requestuser):
 	mydb.reconnect()
 	addContentDataCursor = mydb.cursor(buffered=True)
 	try:
-		table = 'content'						#  title, 								id, 							childfrom, 		nr,							 videopath, 		extention, 		subtitles,	 	   uploaddate,	 		  downloaddate, 	   deleteddate,	 	     	 deleted,	   deletedtype, 	  requestuser
-		statement = f"INSERT INTO {table} VALUES (\"{mydb.converter.escape(title)}\", \"{id}\", \"{mydb.converter.escape(childfrom)}\", {nr}, \"{mydb.converter.escape(videopath)}\", \"{extention}\", {subtitles}, \"{int(uploaddate)}\", \"{int(downloaddate)}\", \"{int(deleteddate)}\", {int(deleted)}, \"{deletedtype}\", \"{requestuser}\")"
+		table = 'content'						#  title, 								id, 							childfrom,							     videopath, 	   extention, 	  subtitles,	 	 uploaddate,	 	    downloaddate, 	   		 deleteddate,	   	   deleted,	     deletedtype, 	    requestuser
+		statement = f"INSERT INTO {table} VALUES (\"{mydb.converter.escape(title)}\", \"{id}\", \"{mydb.converter.escape(childfrom)}\", \"{mydb.converter.escape(videopath)}\", \"{extention}\", {subtitles}, \"{int(uploaddate)}\", \"{int(downloaddate)}\", \"{int(deleteddate)}\", {int(deleted)}, \"{deletedtype}\", \"{requestuser}\")"
 		addContentDataCursor.execute(statement)
 		mydb.commit()
 		return addContentDataCursor.rowcount
