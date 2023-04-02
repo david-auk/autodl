@@ -148,7 +148,8 @@ for (channelTitle, id, priority, pullError) in functions.getData("account", stat
 				else:
 
 					# Notify host downloading gives error
-					functions.msgHost(f"Downloading https://www.youtube.com/watch?v={vidId} from {channelTitle}\ngave ERROR: {failureType}")
+					functions.msgHost(f"Downloading https://www.youtube.com/watch?v={vidId} from {channelTitle}\ngave ERROR: {functions.escapeMarkdown(failureType)}")
+					continue
 
 				if functions.subCheck(channelTitle, filename, videoExtention):
 					functions.chData('content', vidId, 'subtitles', 1)
