@@ -73,7 +73,7 @@ for (channelTitle, id, priority, pullError) in functions.getData("account", stat
 				userRequested = True
 
 			if userRequested:
-				continue # The previous video could hypothetically not be downloaded 
+				continue # The video underneath could hypothetically not be downloaded 
 
 			# Checking if video is in premere
 			isInPremiere = False
@@ -145,7 +145,7 @@ for (channelTitle, id, priority, pullError) in functions.getData("account", stat
 					# Notify host downloading gives error
 					functions.msgHost(f"Downloading https://www.youtube.com/watch?v={vidId} from {channelTitle}\ngave ERROR: {failureType}", False)
 					skippedOnError = True
-					continue
+					break
 
 				if functions.subCheck(channelTitle, filename, videoExtention):
 					functions.chData('content', vidId, 'subtitles', 1)
