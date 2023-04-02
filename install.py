@@ -197,6 +197,7 @@ for key in telegramSql:
 				for eachSplitValue in telegramSql[key][sub_key]['id']:
 					functions.addChatIdData('N/A', eachSplitValue, telegramSql[key][sub_key]['priority'], 'N/A')
 			else:
-				functions.addChatIdData('N/A', telegramSql[key][sub_key]['id'], telegramSql[key][sub_key]['priority'], 'N/A')
-
+				if telegramSql[key][sub_key]['id']:
+					functions.addChatIdData('N/A', telegramSql[key][sub_key]['id'], telegramSql[key][sub_key]['priority'], 'N/A')
+					
 functions.addChatIdDataCursor.close()
