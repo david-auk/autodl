@@ -65,16 +65,17 @@ def check_password(update, context):
 
 
 	if is_allowed_user(update, context):
-		message = context.bot.send_message(chat_id=chat_id, text="Already authorized")
+		message = context.bot.send_message(chat_id=chat_id, text="Already authorized ✅")
 		time.sleep(1.5)
 		context.bot.delete_message(chat_id=chat_id, message_id=userMessageId)
 		context.bot.delete_message(chat_id=chat_id, message_id=message.message_id)
 		return
 
 	# Send a message to the user asking for their password
-	context.bot.send_message(chat_id=chat_id, text="Please enter your password:")
+	message = context.bot.send_message(chat_id=chat_id, text="Please enter your password:")
 
 	# Set the next handler to wait for the user's password
+	context.user_data["passwdinfo"] = {'user_message_id': f'{userMessageId}', 'bot_message_id': f'{message.message_id}'}
 	context.user_data["next_handler"] = "check_password"
 
 
@@ -273,13 +274,19 @@ def link(update, context):
 	"""Handle links sent by the user."""
 	# Get the message text and chat ID
 	message_text = update.message.text
+	userMessageId = update.message.message_id
 	chat_id = update.message.chat_id
 
 	# Check if the user's input is the correct password (if the previous handler was check_password)
 	if context.user_data.get("next_handler") == "check_password":
+		passwdInfo = context.user_data.get("passwdinfo")
+		initialUserMessageId = passwdInfo['user_message_id']
+		initialBotRespondMessageId = passwdInfo['bot_message_id']
+		passwordMessageId = userMessageId
 		if message_text == password:
-			context.bot.send_message(chat_id=chat_id, text="Your password is correct!")
-			
+			message = context.bot.send_message(chat_id=chat_id, text="Correct password ✅")
+			finalBotResponceMessageId = message.message_id
+
 			user = update.message.from_user
 			name = f"@{user.username}"
 			if name == '@':
@@ -300,8 +307,24 @@ def link(update, context):
 				functions.addChatIdData(name, chat_id, '3', '1')
 			if priority != '1':
 				functions.msgHost(f"The user {name} just got added to the Database", False)
+
+			time.sleep(1.5)
+			context.bot.delete_message(chat_id=chat_id, message_id=initialUserMessageId)
+			context.bot.delete_message(chat_id=chat_id, message_id=initialBotRespondMessageId)
+			context.bot.delete_message(chat_id=chat_id, message_id=passwordMessageId)
+			time.sleep(1.5)
+			context.bot.delete_message(chat_id=chat_id, message_id=finalBotResponceMessageId)
 		else:
-			context.bot.send_message(chat_id=chat_id, text="Sorry, that's not the correct password.")
+			message = context.bot.send_message(chat_id=chat_id, text="Sorry, that's not the correct password.")
+			finalBotResponceMessageId = message.message_id
+			time.sleep(1.5)
+			context.bot.delete_message(chat_id=chat_id, message_id=initialUserMessageId)
+			context.bot.delete_message(chat_id=chat_id, message_id=initialBotRespondMessageId)
+			context.bot.delete_message(chat_id=chat_id, message_id=passwordMessageId)
+			context.bot.delete_message(chat_id=chat_id, message_id=finalBotResponceMessageId)
+
+		context.user_data["next_handler"] = ""
+		return
 
 	elif context.user_data.get("next_handler") == "channel_name":
 		channelChatInfo = context.user_data.get("channelChatInfo")
