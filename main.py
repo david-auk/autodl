@@ -99,7 +99,6 @@ for (channelTitle, id, priority, pullError) in functions.getData("account", stat
 				print(f"[{functions.coloursB['yellow']}Skipping{functions.colours['reset']}]\n")
 				functions.msgHost(f"Skipped https://www.youtube.com/watch?v={vidId}", False)
 				totalRecordsSkipped += 1
-				skippedOnError = True
 				break
 
 			videoExtention = vidInfo['ext']
@@ -145,6 +144,7 @@ for (channelTitle, id, priority, pullError) in functions.getData("account", stat
 
 					# Notify host downloading gives error
 					functions.msgHost(f"Downloading https://www.youtube.com/watch?v={vidId} from {channelTitle}\ngave ERROR: {failureType}", False)
+					skippedOnError = True
 					continue
 
 				if functions.subCheck(channelTitle, filename, videoExtention):
