@@ -57,36 +57,45 @@ myTables = {
 		'priority': {
 			'type': 'int(11)'
 		}
+		'pullerror' {
+			'type': 'text'
+		}
 	},
 	'content': {
 		'title': {
 			'type': 'text'
 		},
-		'childfrom': {
-			'type': 'text'
-		},
 		'id': {
 			'type': 'char(12)'
 		},
+		'childfrom': {
+			'type': 'text'
+		}
 		'videopath': {
 			'type': 'text'
 		},
 		'extention': {
 			'type': 'text'
 		},
-		'deleted': {
+		'subtitles': {
 			'type': 'int(11)'
 		},
+		'uploaddate': {
+			'type': 'bigint'
+		},
+		'downloaddate': {
+			'type': 'bigint'
+		},
 		'deleteddate': {
-			'type': 'text'
+			'type': 'bigint'
+		},
+		'deleted': {
+			'type': 'int(11)'
 		},
 		'deletedtype': {
 			'type': 'text'
 		},
 		'requestuser': {
-			'type': 'varchar(11)'
-		},
-		'uploaddate': {
 			'type': 'text'
 		}
 	},
@@ -98,7 +107,7 @@ myTables = {
 			'type': 'char(25)'
 		},
 		'priority': {
-			'type': 'int(11)'
+			'type': 'char(5)'
 		},
 		'authenticated': {
 			'type': 'char(5)'
@@ -190,4 +199,4 @@ for key in telegramSql:
 			else:
 				functions.addChatIdData('N/A', telegramSql[key][sub_key]['id'], telegramSql[key][sub_key]['priority'], 'N/A')
 
-myCursor.close()
+functions.addChatIdDataCursor.close()

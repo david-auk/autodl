@@ -4,10 +4,12 @@ import urllib.parse
 import requests
 import secret
 import datetime
+import subprocess
 import os
 import re
 
-from yt_dlp import YoutubeDL
+from telegram import Bot, ParseMode
+from yt_dlp import YoutubeDL, utils
 
 # Define coulors
 colours = {
@@ -52,19 +54,20 @@ mydb = database.connect(
 	database=secret.mariadb['connection']['database']
 )
 
-# Defining diffirent cursors for diffirent subtasks in functions
-chDataCursor = mydb.cursor(buffered=True)
-delDataCursor = mydb.cursor(buffered=True)
-getDataCursor = mydb.cursor(buffered=True)
-countDataCursor = mydb.cursor(buffered=True)
-addChatIdDataCursor = mydb.cursor(buffered=True)
-addContentDataCursor = mydb.cursor(buffered=True)
-addAccountDataCursor = mydb.cursor(buffered=True)
-getDataContentCheckCursor = mydb.cursor(buffered=True)
-addDeletedContentDataCursor = mydb.cursor(buffered=True)
+class MyLoggerQuiet(object):
+	def debug(self, msg):
+		pass
+
+	def warning(self, msg):
+		pass
+
+	def error(self, msg):
+		pass
 
 # Function for adding instances to the account table
 def addAccountData(title, channelid, priority):
+	mydb.reconnect()
+	addAccountDataCursor = mydb.cursor(buffered=True)
 	try:
 		table = 'account'
 		statement = "INSERT INTO account VALUES (\"{}\", \"{}\", \"{}\")".format(title,channelid,priority)
@@ -76,28 +79,33 @@ def addAccountData(title, channelid, priority):
 
 # Function for adding instances to the content table
 def addChatIdData(name, id, priority, authenticated):
+	mydb.reconnect()
+	addChatIdDataCursor = mydb.cursor(buffered=True)
 	try:
 		table = 'chatid'
 		statement = f"INSERT INTO {table} VALUES (\"{mydb.converter.escape(name)}\", \"{id}\", \"{priority}\", \"{authenticated}\")"
 		addChatIdDataCursor.execute(statement)
 		mydb.commit()
-		print(addChatIdDataCursor.rowcount, "record inserted.")
 	except database.Error as e:
 		print(f"Error adding entry from {mydb.database}[{table}]: {e}")
 
 # Function for adding instances to the content table
-def addContentData(title, childfrom, id, videopath, extention, deleted, deleteddate, deletedtype, requestuser, uploaddate):
+def addContentData(title, id, childfrom, videopath, extention, subtitles, uploaddate, downloaddate, deleteddate, deleted, deletedtype, requestuser):
+	mydb.reconnect()
+	addContentDataCursor = mydb.cursor(buffered=True)
 	try:
-		table = 'content'
-		statement = f"INSERT INTO content VALUES (\"{mydb.converter.escape(title)}\", \"{mydb.converter.escape(childfrom)}\", \"{id}\", \"{mydb.converter.escape(videopath)}\", \"{extention}\", {deleted}, \"{deleteddate}\", \"{deletedtype}\", \"{requestuser}\", \"{uploaddate}\")"
+		table = 'content'						#  title, 								id, 							childfrom,							     videopath, 	   extention, 	  subtitles,	 	 uploaddate,	 	    downloaddate, 	   		 deleteddate,	   	   deleted,	     deletedtype, 	    requestuser
+		statement = f"INSERT INTO {table} VALUES (\"{mydb.converter.escape(title)}\", \"{id}\", \"{mydb.converter.escape(childfrom)}\", \"{mydb.converter.escape(videopath)}\", \"{extention}\", {subtitles}, \"{int(uploaddate)}\", \"{int(downloaddate)}\", \"{int(deleteddate)}\", {int(deleted)}, \"{deletedtype}\", \"{requestuser}\")"
 		addContentDataCursor.execute(statement)
 		mydb.commit()
-		#print(addContentDataCursor.rowcount, "record inserted.")
+		return addContentDataCursor.rowcount
 	except database.Error as e:
 		print(f"Error adding entry from {mydb.database}[{table}]: {e}")
 
 # Function for deleting rows in any table using the id variable
 def delData(table, instanceid):
+	mydb.reconnect()
+	delDataCursor = mydb.cursor(buffered=True)
 	try:
 		statement = "DELETE FROM " + table + " WHERE id=\'{}\'".format(instanceid)
 		delDataCursor.execute(statement)
@@ -108,64 +116,77 @@ def delData(table, instanceid):
 		print(f"Error deleting entry from {mydb.database}[{table}]: {e}")
 
 # Function for searching DB
-def getData(table, column, instanceid):
+def getData(table, inputstatement):
+	mydb.reconnect()
+	getDataCursor = mydb.cursor(buffered=True)
 	try:
-		if instanceid == "ALL":
+		if inputstatement == "ALL":
 			statement = "SELECT * FROM " + table
 		else:
-			statement = "SELECT * FROM " + table + " WHERE {}=\"{}\"".format(column,instanceid)
+			statement = f"SELECT * FROM {table} {inputstatement}" # WHERE {column} {operator} \"{instanceid}\""
 		getDataCursor.execute(statement)
 		return getDataCursor
 	except database.Error as e:
 		print(f"Error retrieving entry from {mydb.database}[{table}]: {e}")
 
-# Function for checking if entry exists
-def getDataContentCheck(table, instanceid):
-	try:
-		column = 'id'
-		statement = "SELECT * FROM " + table + " WHERE {}=\"{}\"".format(column,instanceid)
-		getDataContentCheckCursor.execute(statement)
-		entryExists = False
-		for x in getDataContentCheckCursor:
-			entryExists = True
-
-		return entryExists
-
-	except database.Error as e:
-		print(f"Error retrieving entry from {mydb.database}[{table}]: {e}")
-
 # Function for changing data of a table
 def chData(table, id, column, newData):
+	mydb.reconnect()
+	chDataCursor = mydb.cursor(buffered=True)
 	try:
-		statement = "UPDATE " + table + " SET {}=\"{}\" WHERE id=\"{}\"".format(column,newData,id)
+		statement = "UPDATE " + table + " SET {}=\"{}\" WHERE id=\"{}\"".format(column,mydb.converter.escape(newData),id)
 		chDataCursor.execute(statement)
 		mydb.commit()
 	except database.Error as e:
 		print(f"Error manipulating data from {mydb.database}[{table}]: {e}")
 
 # Function for counting data of a table
-def countData(table, column, arg):
-	if arg == 'ALL':
+def countData(table, inputstatement):
+	mydb.reconnect()
+	countDataCursor = mydb.cursor(buffered=True)
+	column = 'id'
+	if inputstatement == 'ALL':
 		statement = f'SELECT COUNT(ALL {column}) FROM {table}'
 	else:
-		statement = f'SELECT COUNT(ALL {column}) FROM {table} WHERE {column}=\'{arg}\''
+		statement = f'SELECT COUNT(ALL {column}) FROM {table} {inputstatement}'
 
 	countDataCursor.execute(statement)
-	return countDataCursor
+	for x in countDataCursor:
+		count = x[0]
+	return count
+
+def getMaxDataValue(table, column):
+	mydb.reconnect()
+	getMaxDataValueCursor = mydb.cursor(buffered=True)
+	statement = f'SELECT MAX({column}) FROM {table};'
+	getMaxDataValueCursor.execute(statement)
+	for x in getMaxDataValueCursor:
+		maxValue = x[0]
+	return maxValue
+
+def escapeMarkdown(text):
+	escape_list = ['*', '_', '`']
+	formatedQuote = ''.join(['\\'+c if c in escape_list else c for c in text])
+	return formatedQuote
 
 # Function that messages the 'Host' using credentials from secret.py
 def msgHost(query):
 	telegramToken = secret.telegram['credentials']['token']
-	formatedQuote = urllib.parse.quote(query)
-	for x in getData("chatid", 'priority', '1'):
+	for x in getData("chatid", 'WHERE priority=\"1\"'):
 		hostChatId = x[1]
-	requests.get(f"https://api.telegram.org/bot{telegramToken}/sendMessage?chat_id={hostChatId}&text={formatedQuote}")
+
+	escape_list = ['>', '-', ']', '[', '.', '}', '{', '|', ')', '(', '#', '!', '=', '+']
+	formatedQuote = ''.join(['\\'+c if c in escape_list else c for c in query])
+
+	Bot(token=secret.telegram['credentials']['token']).send_message(chat_id=hostChatId, text=formatedQuote, parse_mode=ParseMode.MARKDOWN_V2)
+#	formatedQuote = urllib.parse.quote(query)
+#	requests.get(f"https://api.telegram.org/bot{telegramToken}/sendMessage?chat_id={hostChatId}&text={formatedQuote}")
 
 # Function that messages every chatid from secret.py
 def msgAll(query):
 	telegramToken = secret.telegram['credentials']['token']
 	formatedQuote = urllib.parse.quote(query)
-	for x in getData("chatid", 'priority', 'ALL'):
+	for x in getData("chatid", 'ALL'):
 		currentUserChatId = x[1]
 		requests.get(f"https://api.telegram.org/bot{telegramToken}/sendMessage?chat_id={currentUserChatId}&text={formatedQuote}")
 
@@ -176,8 +197,10 @@ def downloadVid(vidId, channelTitle, filename):
 		'outtmpl': f'{rootDownloadDir}/{channelTitle}/{filename}',
 		'subtitleslangs': ['all', '-live_chat'],
 		'writesubtitles': True,
-		'embedsubtitles': True,
-		'format': 'bestvideo+bestaudio[ext=m4a]/bestvideo+bestaudio'
+		'format': 'bestvideo+bestaudio[ext=m4a]/bestvideo+bestaudio',
+		'postprocessors': [{
+			'key': 'FFmpegEmbedSubtitle'
+		}]
 	}
 	success = False
 	tries = 0
@@ -207,10 +230,11 @@ def downloadThumbnail(vidId, channelTitle, filename, secondLink):
 	filename = f'{destinationDir}/{filename}.jpg'
 
 	success = False
+
 	tries = 0
 	while not success:
 		try:
-			if tries == 5:
+			if tries == 3:
 				break 
 			urllib.request.urlretrieve(url, filename)	# Downloading the url
 			print(f"{coloursB['green']}√{colours['reset']} MAX quality thumbnail")
@@ -253,9 +277,13 @@ def writeDescription(channelTitle, filename, description):
 
 	filename = f'{destinationDir}/{filename}.txt'
 
+	succes = False
 	with open(filename, 'w') as f:
 		f.write(str(description))
 		print(f"{coloursB['green']}√{colours['reset']} description written")
+		succes = True
+
+	return succes
 
 # Function for converting non filename friendly srt to filename friendly
 def filenameFriendly(srtValue):
@@ -277,28 +305,24 @@ def filenameFriendly(srtValue):
 	
 	return filename
 
-# Function for getting vidId
-def getVidId(link):
-	
-	# Check if the URL is in the format https://youtu.be/<video_id>
-	if 'youtu.be' in link:
+# For making a dir in rootdownload when a python download request has come in
+def accNameFriendly(srtValue):
+	# Split the input string into a list of words
+	srtValue = srtValue.lower()
+	words = srtValue.split()
 
-		# Extract the video ID from the URL
-		video_id = link.split('/')[-1].split('?')[0]
-	else:
+	# Capitalize the first letter of each word and join them together
+	modifiedWords = [word.capitalize() for word in words]
+	modifiedString = ''.join(modifiedWords)
+	modifiedString = re.sub(r'[^a-zA-Z0-9\-]+', '', modifiedString)
 
-		# Extract the video ID from the query string of the URL
-		query_string = link.split('?')[1]
-		params = dict(item.split('=') for item in query_string.split('&'))
-		video_id = params['v']
-	
-	return video_id
+	return modifiedString
 
 # Function for saving facts of a video to a dictionary
-def getFacts(vidId, channelTitle, filename):
+def getFacts(vidId):
 	rootDownloadDir = secret.configuration['general']['backupDir']
 	ydl_opts = {
-		'outtmpl': f'{rootDownloadDir}/{channelTitle}/{filename}',
+		'outtmpl': f'{rootDownloadDir}/accountdir/filename',
 		'subtitleslangs': ['all', '-live_chat'],
 		'writesubtitles': True,
 		'embedsubtitles': True,
@@ -317,55 +341,155 @@ def getFacts(vidId, channelTitle, filename):
 			success = True
 		except Exception as e:
 			tries += 1
+			ydl_opts = {
+				'outtmpl': f'{rootDownloadDir}/{channelTitle}/filename',
+				'subtitleslangs': ['all', '-live_chat'],
+				'writesubtitles': True,
+				'embedsubtitles': True,
+				'quiet': True
+			}
 	if success is False:
 		info = 'N/A'
-		uploadDate = 'N/A'
-		return success, info, uploadDate
+
+	return success, info
+
+def getChannelFacts(link):
+	link = f"https://youtube.com/channel/{link}"
+	ydl_opts = {
+		'skip_download': True,
+		'quiet': True,
+		'no_warnings': True,
+		'playlist_items': '1',
+		'match_filter': 'channel',
+		'extract_flat': True,
+		'logger': MyLoggerQuiet()
+	}
+	with YoutubeDL(ydl_opts) as ydl:
+		try:
+			ydl.extract_info(link, download=False)
+			return False
+		except utils.DownloadError as e:
+			message = e
+			if "This channel has no uploads" in str(e):
+				message = "no_uploads"
+			elif "This account has been terminated" in str(e):
+				message = "terminated"
+			return message
+		else:
+			return "else"
+
+def getDate(date):
+	year = date[:4]
+	month = date[4:6]
+	day = date[6:8]
+	if date[8:]:
+		hour = date[8:10]
+		minute = date[10:12]
+	else:
+		hour, minute = '00', '00'
+	return (day, month, year, hour, minute)
+
+def isYtLink(link):
+	"""Extracts the YouTube video ID and type (video or channel) from a URL string."""
+	video_pattern = r"(?:https?:\/\/)?(?:www\.)?(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=))([\w\-]{11})(?:\S+)?"
+	channel_pattern1 = r"(?:https?:\/\/)?(?:www\.)?youtube\.com\/(?:c\/|channel\/)([\w\-]+)(?:\S+)?"
+	channel_pattern2 = r"(?:https?:\/\/)?(?:www\.)?youtube\.com\/@([\w\-]+)(?:\S+)?"
+	channel_pattern3 = r"(?:https?:\/\/)?(?:www\.)?reddit.com\/r\/([\w\-]+)(?:\S+)?"
 	
-	uploadDate = info['upload_date']
-	year = uploadDate[:4]
-	month = uploadDate[4:6]
-	day = uploadDate[6:]
-	uploadDate = f"{day}-{month}-{year}"
-	return success, info, uploadDate
+	video_match = re.match(video_pattern, link)
+	channel_match1 = re.match(channel_pattern1, link)
+	channel_match2 = re.match(channel_pattern2, link)
+	channel_match3 = re.match(channel_pattern3, link)
+	
+	if video_match:
+		return (True, "video", video_match.group(1), 'N/A')
+	elif channel_match1:
+		return (True, "channel", f"channel/{channel_match1.group(1)}", channel_match1.group(1))
+	elif channel_match2:
+		return (True, "channel", f"@{channel_match2.group(1)}", channel_match2.group(1))
+	elif channel_match3:
+		return (True, "channel", f"r/{channel_match3.group(1)}", channel_match3.group(1))
+	else:
+		return (False, 'N/A', 'N/A', 'N/A')
+
+def cleanChannelLink(link):
+	"""Extracts the YouTube video ID and type (video or channel) from a URL string."""
+	channel_pattern = r"(?:https?:\/\/)?(?:www\.)?youtube\.com\/(?:c\/|channel\/)([\w\-]+)(?:\S+)?"
+
+	channel_match = re.match(channel_pattern, link)
+	
+	return channel_match.group(1)
+
+# Function for getting the id of chosen type
+def getChannelId(ytChannelId):
+	ydl_opts = {
+		'skip_download': True,
+		'quiet': True,
+		'no_warnings': True,
+		'playlist_items': '1',
+		'match_filter': 'channel',
+		'extract_flat': True,
+		'logger': MyLoggerQuiet()
+	}
+	try:
+		with YoutubeDL(ydl_opts) as ydl:
+			result = ydl.extract_info(f"https://youtube.com/{ytChannelId}", download=False)
+			if result:
+				return True, result.get('channel_id')
+	except Exception as e:
+		return False, 'N/A'
+		
+
+# 
+def subCheck(channelTitle, filename, ext):
+	rootDownloadDir = secret.configuration['general']['backupDir']
+	filename = f"{rootDownloadDir}/{channelTitle}/{filename}.{ext}"
+
+	# Run ffprobe command to get information about the video file
+	ffprobe_output = subprocess.check_output(["ffprobe", "-v", "error", "-show_entries", "stream=codec_type", "-of", "default=noprint_wrappers=1:nokey=1", filename])
+
+	has_subtitles = False
+	for stream in ffprobe_output.decode().split("\n"):
+		if stream.strip() == "subtitle":
+			has_subtitles = True
+			break
+
+	return has_subtitles
 
 # Function for checking if the vidId is still online
-def avalibilityCheck(vidId):
+def availabilityCheck(vidId):
 
 	# Create full link
 	url = f'https://www.youtube.com/watch?v={vidId}'
 
 	# Make a request to the video page
 	response = requests.get(url)
-
 	responseText = response.content.decode('utf-8')
 
-	#return False, responseText
-
+	# Defining default values
 	isAvalible = True
 	avalibilityType = "Public"
+	striker = 'N/A'
+
+	# Checking for certain html values
 	if '"playabilityStatus":{"status":"LOGIN_REQUIRED","messages"' in responseText:
 		isAvalible = False
 		avalibilityType = "Private"
 	else:
 		if '"playabilityStatus":{"status":"ERROR","reason":"' in responseText:
 			isAvalible = False
-			avalibilityType = "Deleted"
+			for line in responseText.split("\n"):
+				if '"playabilityStatus":{"status":"ERROR","reason":"' in line:
+					result = re.search(r'(?<=},{"text":")(.*?)(?="})', line)
+					if result:
+						striker = result.group(1)
+						avalibilityType = "Striked"
+					else:
+						avalibilityType = "Deleted"
+					break
 		else:
 			if '><meta itemprop="unlisted" content="True">' in responseText:
 				isAvalible = False
 				avalibilityType = "Unlisted"
 
-	return isAvalible, avalibilityType
-
-# Function for closing all the cursors at once
-def closeCursor():
-	chDataCursor.close()
-	delDataCursor.close()
-	getDataCursor.close()
-	countDataCursor.close()
-	addChatIdDataCursor.close()
-	addContentDataCursor.close()
-	addAccountDataCursor.close()
-	getDataContentCheckCursor.close()
-	addDeletedContentDataCursor.close()
+	return isAvalible, avalibilityType, striker
