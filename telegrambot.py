@@ -1,6 +1,7 @@
 import logging
 import functions
 import secret
+import time
 from datetime import datetime, timedelta
 from telegram.ext import Updater, CommandHandler, CallbackQueryHandler, CallbackContext, MessageHandler, Filters
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ParseMode
@@ -34,9 +35,10 @@ def start(update, context):
 def helpMenu(update, context):
 	"""Send a message when the command /help is issued."""
 	update.message.reply_text('The following commands are available:\n\n'
-							  '/help - Show list of useful commands\n'
-							  '/passwd - Check password\n'
-							  '/latest - Ask for the latest data\n'
+							  'Aurhorise using: /passwd\n\n'
+							  'Send me a link!\n'
+							  'I\'ll download the link or add a channel to backup\n\n'
+							  'View the latest downloaded videos with: /latest \n'
 							  '/info - Get info about a link')
 
 def is_allowed_user(update, context):
@@ -59,9 +61,14 @@ def check_password(update, context):
 	"""Check the user's password."""
 	# Get the chat ID
 	chat_id = update.message.chat_id
+	userMessageId = update.message.message_id
+
 
 	if is_allowed_user(update, context):
-		context.bot.send_message(chat_id=chat_id, text="Already authorized")
+		message = context.bot.send_message(chat_id=chat_id, text="Already authorized")
+		time.sleep(1.5)
+		context.bot.delete_message(chat_id=chat_id, message_id=userMessageId)
+		context.bot.delete_message(chat_id=chat_id, message_id=message.message_id)
 		return
 
 	# Send a message to the user asking for their password
@@ -75,6 +82,7 @@ def ask_latest(update, context):
 	"""Ask for the latest data using buttons."""
 
 	chat_id = update.message.chat_id
+	userMessageId = update.message.message_id
 	# Check if the user is allowed to use the bot
 	if is_allowed_user(update, context) is False:
 		context.bot.send_message(chat_id=update.message.chat_id, text="Sorry, you are not authorized to use this bot.")
@@ -84,8 +92,8 @@ def ask_latest(update, context):
 		arg = update.message.text[8:]
 		if arg.isdigit():
 			if int(arg) < 69: # The max lines a messages can contain. Nice
-				table = f'(SELECT * FROM content ORDER BY nr DESC LIMIT {arg})'
-				statment = f'AS subquery ORDER BY nr ASC'
+				table = f'(SELECT * FROM content ORDER BY downloaddate DESC LIMIT {arg})'
+				statment = f'AS subquery ORDER BY downloaddate ASC'
 				totalRows = functions.countData(table, statment)
 				maxLen = len(str(totalRows))
 				latestContent = ''
@@ -93,13 +101,21 @@ def ask_latest(update, context):
 				if totalRows:
 					totalRows += 1
 					for (title, id, childfrom, nr, videopath, extention, subtitles, uploaddate, downloaddate, deleteddate, deleted, deletedtype, requestuser) in functions.getData(table, statment):
+						formattedDate = functions.getDate(str(downloaddate))
 						totalRows -= 1
 						space = " " * (maxLen - len(str(totalRows)))
-						latestContent += f"{totalRows}.{space} {childfrom} | {title}\n"
+						latestContent += f"{totalRows}.{space} {childfrom} | {title} ({formattedDate[1]}/{formattedDate[0]}, {formattedDate[3]}:{formattedDate[4]})\n"
 				else:
 					latestContent='No Data.'
 
-				context.bot.send_message(chat_id=update.message.chat.id, text=latestContent)
+				keyboard = [[InlineKeyboardButton("🗑️", callback_data='delete')]]
+				reply_markup = InlineKeyboardMarkup(keyboard)
+
+				#context.bot.edit_message_text(text=latestContent, chat_id=latestRequestInfo['chat_id'], message_id=latestRequestInfo['message_id'], reply_markup=reply_markup)
+				message = context.bot.send_message(chat_id=update.message.chat.id, text=latestContent, reply_markup=reply_markup)
+				
+				context.user_data["next_handler"] = "delete"
+				context.user_data["deleteMessage"] = {'message_id': f'{message.message_id}', 'chat_id': f'{update.message.chat.id}', 'userMessage_id': f'{userMessageId}'}
 			else:
 				context.bot.send_message(chat_id=update.message.chat.id, text='Requested over MAX lines')
 		else:
@@ -107,14 +123,14 @@ def ask_latest(update, context):
 
 		return
 
-	today = datetime.now().strftime('%d-%m-%Y')
-
 	downloadedToday = False
-	for x in functions.getData('content', f'WHERE downloaddate=\"{datetime.now().strftime("%d-%m-%Y")}\"'):
+	#for x in functions.getData('content', f'WHERE downloaddate=\"{datetime.now().strftime("%d-%m-%Y")}\"'):
+	for x in functions.getData('content', f'WHERE LEFT(downloaddate, 8)=\"{datetime.now().strftime("%Y%m%d")}\"'):
 		downloadedToday = True
 
 	downloadedYesterday = False
-	for x in functions.getData('content', f'WHERE downloaddate=\"{(datetime.now() - timedelta(days=1)).strftime("%d-%m-%Y")}\"'):
+	#for x in functions.getData('content', f'WHERE downloaddate=\"{(datetime.now() - timedelta(days=1)).strftime("%d-%m-%Y")}\"'):
+	for x in functions.getData('content', f'WHERE LEFT(downloaddate, 8)=\"{(datetime.now() - timedelta(days=1)).strftime("%Y%m%d")}\"'):
 		downloadedYesterday = True
 
 	if downloadedToday and downloadedYesterday:
@@ -129,7 +145,7 @@ def ask_latest(update, context):
 	reply_markup = InlineKeyboardMarkup(keyboard)
 
 	message = context.bot.send_message(chat_id=chat_id, text=f'Please choose an option:', reply_markup=reply_markup)
-	context.user_data["latestRequestInfo"] = {'message_id': f'{message.message_id}', 'chat_id': f'{chat_id}'}
+	context.user_data["latestRequestInfo"] = {'message_id': f'{message.message_id}', 'chat_id': f'{chat_id}', 'userMessage_id': f'{userMessageId}'}
 	context.user_data["next_handler"] = "latest"
 
 def buttonResolver(update, context):
@@ -144,39 +160,47 @@ def buttonResolver(update, context):
 		latestRequestInfo = context.user_data.get("latestRequestInfo")
 		if query.data == 'cancel':
 			context.bot.edit_message_text(chat_id=latestRequestInfo['chat_id'], message_id=latestRequestInfo['message_id'], text="Canceled request.")
+			time.sleep(1.5)
+			context.bot.delete_message(chat_id=latestRequestInfo['chat_id'], message_id=latestRequestInfo['userMessage_id'])
+			context.bot.delete_message(chat_id=latestRequestInfo['chat_id'], message_id=latestRequestInfo['message_id'])
 			return
 		else:
 			if query.data == '10':
-				table = f'(SELECT * FROM content ORDER BY nr DESC LIMIT 10)'
-				statment = f'AS subquery ORDER BY nr ASC'
+				dateSpecified = False
+				table = f'(SELECT * FROM content ORDER BY downloaddate DESC LIMIT 10)'
+				statment = f'AS subquery ORDER BY downloaddate ASC'
 				# BC the final statment should look like 'SELECT * FROM (SELECT * FROM content ORDER BY nr DESC LIMIT {latestNum}) AS subquery ORDER BY nr ASC'
 				# But the getData func requires a table
 			else:
 				if query.data == '20':
-					table = f'(SELECT * FROM content ORDER BY nr DESC LIMIT 20)'
-					statment = f'AS subquery ORDER BY nr ASC'
+					dateSpecified = False
+					table = f'(SELECT * FROM content ORDER BY downloaddate DESC LIMIT 20)'
+					statment = f'AS subquery ORDER BY downloaddate ASC'
 					# BC the final statment should look like 'SELECT * FROM (SELECT * FROM content ORDER BY nr DESC LIMIT {latestNum}) AS subquery ORDER BY nr ASC'
 					# But the getData func requires a table
 				else:
 					if query.data == '30':
-						table = f'(SELECT * FROM content ORDER BY nr DESC LIMIT 30)'
-						statment = f'AS subquery ORDER BY nr ASC'
+						dateSpecified = False
+						table = f'(SELECT * FROM content ORDER BY downloaddate DESC LIMIT 30)'
+						statment = f'AS subquery ORDER BY downloaddate ASC'
 						# BC the final statment should look like 'SELECT * FROM (SELECT * FROM content ORDER BY nr DESC LIMIT {latestNum}) AS subquery ORDER BY nr ASC'
 						# But the getData func requires a table
 					else:
 						if query.data == 'today':
-							today = datetime.now().strftime('%d-%m-%Y')
+							dateSpecified = True
+							today = datetime.now().strftime('%Y%m%d')
 							#table = 'content'
 							#statment = f'WHERE uploaddate=\"{today}\"'
-							table = f'(SELECT * FROM content WHERE downloaddate=\"{today}\")'
-							statment = f'AS subquery ORDER BY nr ASC'
+							table = f'(SELECT * FROM content WHERE LEFT(downloaddate, 8)=\"{today}\")'
+							statment = f'AS subquery ORDER BY downloaddate ASC'
 						else:
 							if query.data == 'yesterday':
-								yesterday = (datetime.now() - timedelta(days=1)).strftime('%d-%m-%Y')
+								dateSpecified = True
+								yesterday = (datetime.now() - timedelta(days=1)).strftime('%Y%m%d')
 								#table = 'content'
 								#statment = f'WHERE uploaddate=\"{yesterday}\"'
-								table = f'(SELECT * FROM content WHERE downloaddate=\"{yesterday}\")'
-								statment = f'AS subquery ORDER BY nr ASC'
+								table = f'(SELECT * FROM content WHERE LEFT(downloaddate, 8)=\"{yesterday}\")'
+								statment = f'AS subquery ORDER BY downloaddate ASC'
 
 		#query.edit_message_text(text=f"{text}")
 
@@ -189,12 +213,26 @@ def buttonResolver(update, context):
 			for (title, id, childfrom, nr, videopath, extention, subtitles, uploaddate, downloaddate, deleteddate, deleted, deletedtype, requestuser) in functions.getData(table, statment):
 				totalRows -= 1
 				space = " " * (maxLen - len(str(totalRows)))
-				latestContent += f"{totalRows}.{space} {childfrom} | {title}\n"
+				formattedDate = functions.getDate(str(downloaddate))
+				if dateSpecified:
+					latestContent += f"{totalRows}.{space} {childfrom} | {title} ({formattedDate[3]}:{formattedDate[4]})\n"
+				elif dateSpecified is False:
+					latestContent += f"{totalRows}.{space} {childfrom} | {title} ({formattedDate[1]}/{formattedDate[0]}, {formattedDate[3]}:{formattedDate[4]})\n"
 		else:
 			latestContent='No Data.'
 
-		#context.bot.send_message(chat_id=update.effective_chat.id, text=latestContent)
-		query.edit_message_text(text=latestContent)
+		keyboard = [[InlineKeyboardButton("🗑️", callback_data='delete')]]
+		reply_markup = InlineKeyboardMarkup(keyboard)
+
+		context.bot.edit_message_text(text=latestContent, chat_id=latestRequestInfo['chat_id'], message_id=latestRequestInfo['message_id'], reply_markup=reply_markup)
+
+		context.user_data["next_handler"] = "delete"
+		context.user_data["deleteMessage"] = {'message_id': f"{latestRequestInfo['message_id']}", 'chat_id': f"{latestRequestInfo['chat_id']}", 'userMessage_id': f"{latestRequestInfo['userMessage_id']}"}
+					
+	elif buttonHandler == 'delete':
+		deleteMessage = context.user_data.get("deleteMessage")
+		context.bot.delete_message(chat_id=deleteMessage['chat_id'], message_id=deleteMessage['userMessage_id'])
+		context.bot.delete_message(chat_id=deleteMessage['chat_id'], message_id=deleteMessage['message_id'])
 
 	# Incoming priority request
 	elif buttonHandler == 'priority': 
@@ -262,7 +300,6 @@ def link(update, context):
 				functions.addChatIdData(name, chat_id, '3', '1')
 
 			functions.msgHost(f"The user {name} just got added to the Database")
-
 		else:
 			context.bot.send_message(chat_id=chat_id, text="Sorry, that's not the correct password.")
 
@@ -320,11 +357,16 @@ def link(update, context):
 				message = context.bot.send_message(chat_id=chat_id, text=f"Getting facts for: \'{ytLinkId}\'")
 				message_id = update.message.message_id
 
-				succes, info, uploadDate = functions.getFacts(ytLinkId)
+				succes, info = functions.getFacts(ytLinkId)
 				
 				if succes:
 					videoTitle = info['title']
 					videoExtention = info['ext']
+					if 'release_date' in info:
+						uploadDate = info['release_date']
+					else:
+						uploadDate = info['upload_date']
+
 					channelId = functions.cleanChannelLink(info['channel_url'])
 
 					# Check if the channel is getting backed up (and if there is a custom name)
@@ -365,7 +407,7 @@ def link(update, context):
 					return
 
 				currentNum = functions.countData("content", 'ALL')
-				downloaddate = datetime.now().strftime('%d-%m-%Y')
+				downloaddate = datetime.now().strftime('%Y%m%d%H%M%S')
 
 				functions.addContentData(videoTitle, ytLinkId, channelTitle, currentNum, filename, videoExtention, 0, uploadDate, downloaddate, 'N/A', 0, 'Public', chat_id)
 				

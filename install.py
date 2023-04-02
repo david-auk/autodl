@@ -84,13 +84,13 @@ myTables = {
 			'type': 'int(11)'
 		},
 		'uploaddate': {
-			'type': 'text'
+			'type': 'bigint'
 		},
 		'downloaddate': {
-			'type': 'text'
+			'type': 'bigint'
 		},
 		'deleteddate': {
-			'type': 'text'
+			'type': 'bigint'
 		},
 		'deleted': {
 			'type': 'int(11)'

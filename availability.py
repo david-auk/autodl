@@ -17,8 +17,7 @@ sleepTime = args.sleeptime
 originalTerminalWidth = shutil.get_terminal_size().columns
 
 # Getting date
-currentDate = datetime.datetime.now()
-formattedDate = currentDate.strftime("%d-%m-%Y")
+formattedDate = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
 
 totalRows = functions.countData("content", 'ALL')
 

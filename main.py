@@ -98,7 +98,7 @@ for (channelTitle, id, priority, pullError) in functions.getData("account", stat
 			filename = functions.filenameFriendly(videoTitle)
 
 			# Gather facts
-			success, vidInfo, uploadDate = functions.getFacts(vidId)
+			success, vidInfo = functions.getFacts(vidId)
 
 			if success is False:
 				print(f"[{functions.coloursB['yellow']}Skipping{functions.colours['reset']}]\n")
@@ -107,6 +107,11 @@ for (channelTitle, id, priority, pullError) in functions.getData("account", stat
 				continue
 
 			videoExtention = vidInfo['ext']
+
+			if 'release_date' in vidInfo:
+				uploadDate = vidInfo['release_date']
+			else:
+				uploadDate = vidInfo['upload_date']
 
 			# Deciding if the video will be downloaded
 			if skipDownload is False:
@@ -137,10 +142,11 @@ for (channelTitle, id, priority, pullError) in functions.getData("account", stat
 						currentNum = functions.getMaxDataValue('content', 'nr') + 1
 
 						# Getting the current date in desired format
-						downloaddate = datetime.date.today().strftime('%d-%m-%Y')
+						downloaddate = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
 
 						# Adding new entry to 'content' table
-						totalRecordsAdded += functions.addContentData(videoTitle, vidId, channelTitle, currentNum, filename, videoExtention, 0, uploadDate, downloaddate, 'N/A', 0, 'Public', requestuser)
+						#totalRecordsAdded += functions.addContentData(videoTitle, vidId, channelTitle, currentNum, filename, videoExtention, 0, int(uploadDate), int(downloaddate), 'N/A', 0, 'Public', requestuser)
+						functions.addContentData(videoTitle, vidId, channelTitle, currentNum, filename, videoExtention, 0, uploadDate, downloaddate, 0, 0, 'Public', requestuser)
 			
 				else:
 

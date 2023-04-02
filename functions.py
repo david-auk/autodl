@@ -94,8 +94,8 @@ def addContentData(title, id, childfrom, nr, videopath, extention, subtitles, up
 	mydb.reconnect()
 	addContentDataCursor = mydb.cursor(buffered=True)
 	try:
-		table = 'content'						#  title, 								id, 							childfrom, 		nr,							 videopath, 		extention, 		subtitles,	 uploaddate, 		downloaddate, 		deleteddate,	 deleted,	 deletedtype, 		requestuser
-		statement = f"INSERT INTO {table} VALUES (\"{mydb.converter.escape(title)}\", \"{id}\", \"{mydb.converter.escape(childfrom)}\", {nr}, \"{mydb.converter.escape(videopath)}\", \"{extention}\", {subtitles}, \"{uploaddate}\", \"{downloaddate}\", \"{deleteddate}\", {deleted}, \"{deletedtype}\", \"{requestuser}\")"
+		table = 'content'						#  title, 								id, 							childfrom, 		nr,							 videopath, 		extention, 		subtitles,	 	   uploaddate,	 		  downloaddate, 	   deleteddate,	 	     	 deleted,	   deletedtype, 	  requestuser
+		statement = f"INSERT INTO {table} VALUES (\"{mydb.converter.escape(title)}\", \"{id}\", \"{mydb.converter.escape(childfrom)}\", {nr}, \"{mydb.converter.escape(videopath)}\", \"{extention}\", {subtitles}, \"{int(uploaddate)}\", \"{int(downloaddate)}\", \"{int(deleteddate)}\", {int(deleted)}, \"{deletedtype}\", \"{requestuser}\")"
 		addContentDataCursor.execute(statement)
 		mydb.commit()
 		return addContentDataCursor.rowcount
@@ -350,15 +350,8 @@ def getFacts(vidId):
 			}
 	if success is False:
 		info = 'N/A'
-		uploadDate = 'N/A'
-		return success, info, uploadDate
-	
-	uploadDate = info['upload_date']
-	year = uploadDate[:4]
-	month = uploadDate[4:6]
-	day = uploadDate[6:]
-	uploadDate = f"{day}-{month}-{year}"
-	return success, info, uploadDate
+
+	return success, info
 
 def getChannelFacts(link):
 	link = f"https://youtube.com/channel/{link}"
@@ -384,6 +377,17 @@ def getChannelFacts(link):
 			return message
 		else:
 			return "else"
+
+def getDate(date):
+	year = date[:4]
+	month = date[4:6]
+	day = date[6:8]
+	if date[8:]:
+		hour = date[8:10]
+		minute = date[10:12]
+	else:
+		hour, minute = '00', '00'
+	return (day, month, year, hour, minute)
 
 def isYtLink(link):
 	"""Extracts the YouTube video ID and type (video or channel) from a URL string."""
