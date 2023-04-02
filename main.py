@@ -152,7 +152,6 @@ for (channelTitle, id, priority, pullError) in functions.getData("account", stat
 
 	if skippedOnError:
 		skippedOnError = False
-		print("skippedOnError")
 		continue
 
 	elif forLoopRan is False:
