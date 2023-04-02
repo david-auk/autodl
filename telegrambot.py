@@ -325,7 +325,9 @@ def link(update, context):
 				functions.msgHost(f"User '{name}'\njust requested to backup channel: " + "{" + f" 'priority': '{channelChatInfo['priority']}', 'name': '{channelChatInfo['channel_name']}' " + "}" + "\n\nAdd with messaging the link back")
 				functions.msgHost(f"https://youtube.com/channel/{channelChatInfo['channel_id']}")
 				context.bot.edit_message_text(chat_id=channelChatInfo['chat_id'], message_id=channelChatInfo['message_id'], text=f"Requested: {channelChatInfo['channel_name']} ⏳")
-	
+			
+			context.user_data["next_handler"] = ""
+			return
 	# Handle other messages as usual
 	else:
 		
