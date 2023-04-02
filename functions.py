@@ -74,6 +74,7 @@ def addAccountData(title, channelid, priority):
 	try:
 		table = 'account'
 		statement = f"INSERT INTO {table} VALUES ('\"{title}\", \"{channelid}\", \"{priority}\" \"N/A\"')"
+		print(statement)
 		addAccountDataCursor.execute(statement)
 		mydb.commit()
 		#print(addAccountDataCursor.rowcount, "record inserted.")
