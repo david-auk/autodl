@@ -174,17 +174,18 @@ def escapeMarkdown(text):
 	return formatedQuote
 
 # Function that messages the 'Host' using credentials from secret.py
-def msgHost(query):
+def msgHost(query, usingMarkdown):
 	telegramToken = secret.telegram['credentials']['token']
 	for x in getData("chatid", 'WHERE priority=\"1\"'):
 		hostChatId = x[1]
 
-	escape_list = ['>', '-', ']', '[', '.', '}', '{', '|', ')', '(', '#', '!', '=', '+']
-	formatedQuote = ''.join(['\\'+c if c in escape_list else c for c in query])
-
-	Bot(token=secret.telegram['credentials']['token']).send_message(chat_id=hostChatId, text=formatedQuote, parse_mode=ParseMode.MARKDOWN_V2)
-#	formatedQuote = urllib.parse.quote(query)
-#	requests.get(f"https://api.telegram.org/bot{telegramToken}/sendMessage?chat_id={hostChatId}&text={formatedQuote}")
+	if usingMarkdown:
+		escape_list = ['>', '-', ']', '[', '.', '}', '{', '|', ')', '(', '#', '!', '=', '+']
+		formatedQuote = ''.join(['\\'+c if c in escape_list else c for c in query])
+		Bot(token=secret.telegram['credentials']['token']).send_message(chat_id=hostChatId, text=formatedQuote, parse_mode=ParseMode.MARKDOWN_V2)
+	else:
+		formatedQuote = urllib.parse.quote(query)
+		requests.get(f"https://api.telegram.org/bot{telegramToken}/sendMessage?chat_id={hostChatId}&text={formatedQuote}")
 
 # Function that messages every chatid from secret.py
 def msgAll(query):

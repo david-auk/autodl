@@ -102,7 +102,7 @@ for (channelTitle, id, priority, pullError) in functions.getData("account", stat
 
 			if success is False:
 				print(f"[{functions.coloursB['yellow']}Skipping{functions.colours['reset']}]\n")
-				functions.msgHost(f"Skipped https://www.youtube.com/watch?v={vidId}")
+				functions.msgHost(f"Skipped https://www.youtube.com/watch?v={vidId}", False)
 				totalRecordsSkipped += 1
 				continue
 
@@ -148,7 +148,7 @@ for (channelTitle, id, priority, pullError) in functions.getData("account", stat
 				else:
 
 					# Notify host downloading gives error
-					functions.msgHost(f"Downloading https://www.youtube.com/watch?v={vidId} from {channelTitle}\ngave ERROR: {functions.escapeMarkdown(failureType)}")
+					functions.msgHost(f"Downloading https://www.youtube.com/watch?v={vidId} from {channelTitle}\ngave ERROR: {failureType}", False)
 					continue
 
 				if functions.subCheck(channelTitle, filename, videoExtention):
@@ -167,11 +167,11 @@ for (channelTitle, id, priority, pullError) in functions.getData("account", stat
 		if currentChannelFacts != pullError: # First time detecting channel as 'empty'
 			if currentChannelFacts == 'terminated':
 				print(f"{functions.coloursB['red']}CHANNEL TERMINATED{functions.colours['reset']}\n[{functions.coloursB['red']}X{functions.colours['reset']}] https://youtube.com/channel/{id}\n")
-				functions.msgHost(functions.escapeMarkdown(f"{channelTitle} gave a pull error: 'Terminated'\n\nhttps://youtube.com/channel/{id}"))
+				functions.msgHost(functions.escapeMarkdown(f"{channelTitle} gave a pull error: 'Terminated'\n\nhttps://youtube.com/channel/{id}", True))
 				functions.chData('account', id, 'pullerror', 'terminated')
 			elif currentChannelFacts == 'no_uploads':
 				print(f"{functions.coloursB['red']}NO VIDEOS FOUND{functions.colours['reset']}\n[{functions.coloursB['red']}X{functions.colours['reset']}] https://youtube.com/channel/{id}\n")
-				functions.msgHost(f"{functions.escapeMarkdown(channelTitle)} gave a pull error: 'No Uploads'\n\nhttps://youtube.com/channel/{id}")
+				functions.msgHost(f"{functions.escapeMarkdown(channelTitle)} gave a pull error: 'No Uploads'\n\nhttps://youtube.com/channel/{id}", True)
 				functions.chData('account', id, 'pullerror', 'no_uploads')
 		elif pullError == 'no_uploads': # There still is no new uploaded video
 			print(f"{functions.coloursB['red']}NO VIDEOS FOUND{functions.colours['reset']}\n[{functions.coloursB['red']}X{functions.colours['reset']}] https://youtube.com/channel/{id}\n")
