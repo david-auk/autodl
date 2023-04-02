@@ -70,7 +70,7 @@ myTables = {
 		},
 		'childfrom': {
 			'type': 'text'
-		}
+		},
 		'videopath': {
 			'type': 'text'
 		},
