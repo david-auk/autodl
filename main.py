@@ -10,7 +10,7 @@ import random
 requestuser = "scanner" # This will be the default value of the 'reqester' field in SQL
 totalRecordsAdded = 0 # So we can count upwards	
 totalRecordsSkipped = 0 # So we can count upwards
-skipDownload = False
+skipDownload, skippedOnError = False, False
 
 ## Basic definition end.
 
@@ -36,11 +36,6 @@ else:
 	statement = 'ORDER BY title ASC;'
 
 ## Flags end.
-
-
-#functions
-
-#quit()
 
 for (channelTitle, id, priority, pullError) in functions.getData("account", statement):
 
@@ -104,6 +99,7 @@ for (channelTitle, id, priority, pullError) in functions.getData("account", stat
 				print(f"[{functions.coloursB['yellow']}Skipping{functions.colours['reset']}]\n")
 				functions.msgHost(f"Skipped https://www.youtube.com/watch?v={vidId}", False)
 				totalRecordsSkipped += 1
+				skippedOnError = True
 				break
 
 			videoExtention = vidInfo['ext']
@@ -154,7 +150,11 @@ for (channelTitle, id, priority, pullError) in functions.getData("account", stat
 				if functions.subCheck(channelTitle, filename, videoExtention):
 					functions.chData('content', vidId, 'subtitles', 1)
 
-	if forLoopRan is False:
+	if skippedOnError:
+		skippedOnError = False
+		continue
+
+	elif forLoopRan is False:
 		if pullError == 'N/A':
 			currentChannelFacts = functions.getChannelFacts(id)
 		else:

@@ -269,7 +269,7 @@ def downloadThumbnail(vidId, channelTitle, filename, secondLink):
 	if success:
 		return success
 	else:
-		msgHost(f"ERROR: Could not download thumbnail, Account: \'{channelTitle}\", Url: \'https://www.youtube.com/watch?v={vidId}\'")
+		msgHost(f"ERROR: Could not download thumbnail, Account: \'{channelTitle}\", Url: \'https://www.youtube.com/watch?v={vidId}\'", False)
 		quit()
 
 # Function for writing description of video
