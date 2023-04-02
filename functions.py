@@ -215,11 +215,12 @@ def downloadVid(vidId, channelTitle, filename):
 			with YoutubeDL(ydl_opts) as ydl:
 				ydl.download([f'https://www.youtube.com/watch?v={vidId}'])
 			success = True
-			e = success
+			errorType = True
 		except Exception as e:
 			print(f"Download failed: {e}")
+			errorType = e
 			tries += 1
-	return success, e
+	return success, errorType
 
 # Function for saving thumbnail
 def downloadThumbnail(vidId, channelTitle, filename, secondLink):
