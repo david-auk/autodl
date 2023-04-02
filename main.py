@@ -104,7 +104,7 @@ for (channelTitle, id, priority, pullError) in functions.getData("account", stat
 				print(f"[{functions.coloursB['yellow']}Skipping{functions.colours['reset']}]\n")
 				functions.msgHost(f"Skipped https://www.youtube.com/watch?v={vidId}", False)
 				totalRecordsSkipped += 1
-				continue
+				break
 
 			videoExtention = vidInfo['ext']
 

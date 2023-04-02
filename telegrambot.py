@@ -298,8 +298,8 @@ def link(update, context):
 					functions.chData('chatid', chat_id, 'priority', '3')
 			else:
 				functions.addChatIdData(name, chat_id, '3', '1')
-
-			functions.msgHost(f"The user {name} just got added to the Database")
+			if priority != '1':
+				functions.msgHost(f"The user {name} just got added to the Database", False)
 		else:
 			context.bot.send_message(chat_id=chat_id, text="Sorry, that's not the correct password.")
 
@@ -322,8 +322,8 @@ def link(update, context):
 				functions.addAccountData(channelChatInfo['channel_name'], channelChatInfo['channel_id'], channelChatInfo['priority'])
 				context.bot.edit_message_text(chat_id=channelChatInfo['chat_id'], message_id=channelChatInfo['message_id'], text=f"Added: {channelChatInfo['channel_name']} ✅")
 			else:
-				functions.msgHost(f"User '{name}'\njust requested to backup channel: " + "{" + f" 'priority': '{channelChatInfo['priority']}', 'name': '{channelChatInfo['channel_name']}' " + "}" + "\n\nAdd with messaging the link back")
-				functions.msgHost(f"https://youtube.com/channel/{channelChatInfo['channel_id']}")
+				functions.msgHost(f"User '{name}'\njust requested to backup channel: " + "{" + f" 'priority': '{channelChatInfo['priority']}', 'name': '{channelChatInfo['channel_name']}' " + "}" + "\n\nAdd with messaging the link back", False)
+				functions.msgHost(f"https://youtube.com/channel/{channelChatInfo['channel_id']}", False)
 				context.bot.edit_message_text(chat_id=channelChatInfo['chat_id'], message_id=channelChatInfo['message_id'], text=f"Requested: {channelChatInfo['channel_name']} ⏳")
 			
 			context.user_data["next_handler"] = ""
@@ -420,8 +420,8 @@ def link(update, context):
 
 				for (name, id, priority, authenticated) in functions.getData('chatid', f'WHERE id={chat_id}'):
 					if priority != '1':
-						functions.msgHost(f"{name}, Just downloaded: https://youtube.com/watch?v={ytLinkId}")
-						functions.msgHost(f"/remove {ytLinkId}")
+						functions.msgHost(f"{name}, Just downloaded: https://youtube.com/watch?v={ytLinkId}", False)
+						functions.msgHost(f"/remove `{ytLinkId}`", True)
 			else:
 				if ytLinkType == 'channel':
 
