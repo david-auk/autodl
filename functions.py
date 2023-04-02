@@ -73,7 +73,7 @@ def addAccountData(title, channelid, priority):
 	addAccountDataCursor = mydb.cursor(buffered=True)
 	try:
 		table = 'account'
-		statement = f"INSERT INTO {table} VALUES ('\"{title}\", \"{channelid}\", \"{priority}\" \"N/A\"')"
+		statement = f"INSERT INTO {table} VALUES (\"{title}\", \"{channelid}\", \"{priority}\" \"N/A\")"
 		print(statement)
 		addAccountDataCursor.execute(statement)
 		mydb.commit()
