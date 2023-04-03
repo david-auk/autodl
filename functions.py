@@ -5,6 +5,7 @@ import requests
 import secret
 import datetime
 import subprocess
+import shutil
 import os
 import re
 
@@ -106,19 +107,6 @@ def addContentData(title, id, childfrom, videopath, extention, subtitles, upload
 	except database.Error as e:
 		print(f"Error adding entry from {mydb.database}[{table}]: {e}")
 
-# Function for deleting rows in any table using the id variable
-def delData(table, instanceid):
-	mydb.reconnect()
-	delDataCursor = mydb.cursor(buffered=True)
-	try:
-		statement = "DELETE FROM " + table + " WHERE id=\'{}\'".format(instanceid)
-		delDataCursor.execute(statement)
-		mydb.commit()
-		if delDataCursor.rowcount == 0:
-			print("No rows where deleted.")
-	except database.Error as e:
-		print(f"Error deleting entry from {mydb.database}[{table}]: {e}")
-
 # Function for searching DB
 def getData(table, inputstatement):
 	mydb.reconnect()
@@ -167,6 +155,49 @@ def getMaxDataValue(table, column):
 	for x in getMaxDataValueCursor:
 		maxValue = x[0]
 	return maxValue
+
+# Function for deleting rows in any table using the id variable
+def delData(table, instanceid):
+	mydb.reconnect()
+	delDataCursor = mydb.cursor(buffered=True)
+	try:
+		statement = "DELETE FROM " + table + " WHERE id=\'{}\'".format(instanceid)
+		delDataCursor.execute(statement)
+		mydb.commit()
+		if delDataCursor.rowcount == 0:
+			print("No rows where deleted.")
+	except database.Error as e:
+		print(f"Error deleting entry from {mydb.database}[{table}]: {e}")
+
+# Function for deleting video
+def delVid(vidId):
+	
+	# Getting facts
+	rootDownloadDir = secret.configuration['general']['backupDir']
+	for (title, id, childfrom, videopath, extention, subtitles, uploaddate, downloaddate, deleteddate, deleted, deletedtype, writtenrequestuser) in getData('content', f'WHERE id=\"{vidId}\"'):
+		accountPath = f'{rootDownloadDir}/{childfrom}'
+		pathDictionary = {
+			'video': f'{rootDownloadDir}/{childfrom}/{videopath}.{extention}',
+			'thumbnail': f'{rootDownloadDir}/{childfrom}/thumbnail/{videopath}.jpg',
+			'description': f'{rootDownloadDir}/{childfrom}/description/{videopath}.txt'
+		}
+
+	# Removing files
+	for value in pathDictionary:
+		os.remove(pathDictionary[value])
+
+	# Getting all content in directory
+	dirContent = os.listdir(accountPath)
+	dirContent = [f for f in dirContent if not f.startswith('.')]
+	dirContent.remove('thumbnail')
+	dirContent.remove('description')
+
+	# Deleting directory (if empty)
+	if not dirContent:
+		shutil.rmtree(f'{rootDownloadDir}/{childfrom}')
+
+	# Deleting entry from DB
+	delData('content', vidId)
 
 def escapeMarkdown(text):
 	escape_list = ['*', '_', '`']

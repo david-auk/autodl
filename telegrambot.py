@@ -483,6 +483,58 @@ def link(update, context):
 
 	context.user_data["next_handler"] = ""
 
+def delete(update, context):
+	initialUserMessageId = update.message.message_id
+	message_text = update.message.text
+	chat_id = update.message.chat_id
+	link = message_text[8:]
+	
+	if not link:
+		message = context.bot.send_message(chat_id=chat_id, text="Send a link in the format: /delete youtu.be/VIDID")
+		responseMessageId = message.message_id
+		time.sleep(3)
+		context.bot.delete_message(chat_id=chat_id, message_id=responseMessageId)
+		context.bot.delete_message(chat_id=chat_id, message_id=initialUserMessageId)
+		return
+
+	isYtLink, ytLinkType, ytLinkId, ytLinkIdClean = functions.isYtLink(link)
+	if isYtLink is False:
+		message = context.bot.send_message(chat_id=chat_id, text="Send a youtube: Channel, Video ❌")
+		responseMessageId = message.message_id
+		time.sleep(3)
+		context.bot.delete_message(chat_id=chat_id, message_id=responseMessageId)
+		context.bot.delete_message(chat_id=chat_id, message_id=initialUserMessageId)
+		return
+
+	if ytLinkType == 'video':
+		entryExists = False
+		for x in functions.getData('content', f'WHERE id=\"{ytLinkId}\"'):
+			entryExists = True
+
+		if entryExists:
+			for (name, id, priority, authenticated) in functions.getData('chatid', f'WHERE id=\"{chat_id}\"'):
+				if priority == '1':
+					message = context.bot.send_message(chat_id=chat_id, text="Deleting video ⏳")
+					functions.delVid(ytLinkId)
+					time.sleep(0.5)
+					context.bot.edit_message_text(chat_id=chat_id, message_id=message.message_id, text="Video deleted from backup. ✅")
+				else:
+					context.bot.send_message(chat_id=chat_id, text="Sent removal request to host ⏳")
+					functions.msgHost(f"User, {name} just requested to remove https://youtu.be/{ytLinkId}")
+		else:
+			message = context.bot.send_message(chat_id=chat_id, text="Video was not downloaded. ✅")
+			responseMessageId = message.message_id
+			time.sleep(1.5)
+			context.bot.delete_message(chat_id=chat_id, message_id=initialUserMessageId)
+			context.bot.delete_message(chat_id=chat_id, message_id=responseMessageId)
+
+	elif ytLinkType == 'channel':
+		entryExists = False
+		for x in functions.getData('account', f'WHERE id=\"{ytLinkId}\"'):
+			entryExists = True
+
+
+
 def error(update, context):
 	"""Echo the user message."""
 	update.message.reply_text(f"Unknown command: {update.message.text}")
@@ -500,6 +552,7 @@ def main():
 	dp.add_handler(CommandHandler("help", helpMenu))
 	dp.add_handler(CommandHandler("passwd", check_password))
 	dp.add_handler(CommandHandler("latest", ask_latest))
+	dp.add_handler(CommandHandler("delete", delete))
 	dp.add_handler(CallbackQueryHandler(buttonResolver))
 	dp.add_handler(CommandHandler("info", get_info))
 	dp.add_handler(MessageHandler(Filters.text & (~Filters.command), link))
