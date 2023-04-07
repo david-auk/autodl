@@ -252,6 +252,27 @@ def buttonResolver(update, context):
 		context.user_data["next_handler"] = 'channel_name'
 		context.user_data["channelChatInfo"] = channelChatInfo
 
+def sendContent(update, context):
+	chat_id = update.message.chat_id
+	vidId=''
+
+	# Getting facts
+	rootDownloadDir = secret.configuration['general']['backupDir']
+	for (title, id, childfrom, videopath, extention, subtitles, uploaddate, downloaddate, deleteddate, deleted, deletedtype, writtenrequestuser) in functions.getData('content', f'WHERE id=\"{vidId}\"'):
+		accountPath = f'{rootDownloadDir}/{childfrom}'
+		pathDictionary = {
+			'video': f'{rootDownloadDir}/{childfrom}/{videopath}.{extention}',
+			'thumbnail': f'{rootDownloadDir}/{childfrom}/thumbnail/{videopath}.jpg',
+			'description': f'{rootDownloadDir}/{childfrom}/description/{videopath}.txt'
+		}
+
+	# Send the video file to the user
+	
+	context.bot.send_document(chat_id=chat_id, document=open(pathDictionary['thumbnail'], 'rb'), caption='')
+	context.bot.send_document(chat_id=chat_id, document=open(pathDictionary['description'], 'rb'), caption='')
+	context.bot.send_video(chat_id=chat_id, video=open(pathDictionary['video'], 'rb'), caption='')
+
+
 def get_info(update, context):
 	"""Listen for user input and do an if statement."""
 
@@ -553,6 +574,7 @@ def main():
 	dp.add_handler(CommandHandler("passwd", check_password))
 	dp.add_handler(CommandHandler("latest", ask_latest))
 	dp.add_handler(CommandHandler("delete", delete))
+	dp.add_handler(CommandHandler("send", sendContent))
 	dp.add_handler(CallbackQueryHandler(buttonResolver))
 	dp.add_handler(CommandHandler("info", get_info))
 	dp.add_handler(MessageHandler(Filters.text & (~Filters.command), link))
