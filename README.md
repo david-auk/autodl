@@ -18,7 +18,8 @@ python3 main.py
 ```
 
 ### Dependencies:
-* MariaDB
+* mariadb-server
+* ffmpeg
 
 ## Functions Documantation
 

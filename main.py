@@ -164,7 +164,7 @@ for (channelTitle, id, priority, pullError) in functions.getData("account", stat
 			else:
 				currentChannelFacts = pullError # Dont check if the account status is changed
 
-		if currentChannelFacts != pullError: # First time detecting channel as 'empty'
+		if currentChannelFacts != pullError: # First time detecting channel new 'pullError' type
 			if currentChannelFacts == 'terminated':
 				print(f"{functions.coloursB['red']}CHANNEL TERMINATED{functions.colours['reset']}\n[{functions.coloursB['red']}X{functions.colours['reset']}] https://youtube.com/channel/{id}\n")
 				functions.msgHost(functions.escapeMarkdown(f"{channelTitle} gave a pull error: 'Terminated'\n\nhttps://youtube.com/channel/{id}", True))

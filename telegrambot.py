@@ -38,8 +38,9 @@ def helpMenu(update, context):
 							  'Aurhorise using: /passwd\n\n'
 							  'Send me a link!\n'
 							  'I\'ll download the link or add a channel to backup\n\n'
-							  'View the latest downloaded videos with: /latest \n'
-							  '/info - Get info about a link')
+							  'View the latest videos with: /latest \n'
+							  '/info - Get info about a link\n'
+							  '/send VIDID to view the content')
 
 def is_allowed_user(update, context):
 	"""Check if the current user ID is allowed."""
@@ -62,7 +63,6 @@ def check_password(update, context):
 	# Get the chat ID
 	chat_id = update.message.chat_id
 	userMessageId = update.message.message_id
-
 
 	if is_allowed_user(update, context):
 		message = context.bot.send_message(chat_id=chat_id, text="Already authorized ✅")
@@ -251,6 +251,101 @@ def buttonResolver(update, context):
 		
 		context.user_data["next_handler"] = 'channel_name'
 		context.user_data["channelChatInfo"] = channelChatInfo
+
+def sendContent(update, context):
+	chat_id = update.message.chat_id
+
+	# Check if the user is allowed to use the bot
+	if is_allowed_user(update, context) is False:
+		context.bot.send_message(chat_id=chat_id, text="Sorry, you are not authorized to use this bot.")
+		return
+
+	initialUserMessageId = update.message.message_id
+	message_text = update.message.text
+	link = message_text[6:]
+
+	if link:
+		isYtLink, ytLinkType, ytLinkId, ytLinkIdClean = functions.isYtLink(link)
+
+		if ytLinkType == 'video':
+			vidId = ytLinkId
+		else:
+			vidId = link
+
+		entryExists = False
+		for x in functions.getData('content', f'WHERE id=\"{vidId}\"'):
+			entryExists = True
+
+		if entryExists:
+			for (name, id, priority, authenticated) in functions.getData('chatid', f'WHERE id=\"{chat_id}\"'):
+				if priority != '1':
+					functions.msgHost(f"Server is sending User, {name}: `{ytLinkId}`", True)
+				
+				sendActualContent(update, context, vidId)
+
+		else:
+			message = context.bot.send_message(chat_id=chat_id, text="Video not found. ❌")
+			responseMessageId = message.message_id
+			time.sleep(3)
+			context.bot.delete_message(chat_id=chat_id, message_id=initialUserMessageId)
+			context.bot.delete_message(chat_id=chat_id, message_id=responseMessageId)
+
+	else:
+		message = context.bot.send_message(chat_id=chat_id, text="Send a link in the format: /send VIDID | /send youtu.be/VIDID")
+		responseMessageId = message.message_id
+		time.sleep(5)
+		context.bot.delete_message(chat_id=chat_id, message_id=responseMessageId)
+		context.bot.delete_message(chat_id=chat_id, message_id=initialUserMessageId)
+		return
+
+def sendActualContent(update, context, vidId):
+	chat_id = update.message.chat_id
+
+	# Getting facts
+	rootDownloadDir = secret.configuration['general']['backupDir']
+	for (title, id, childfrom, videopath, extention, subtitles, uploaddate, downloaddate, deleteddate, deleted, deletedtype, writtenrequestuser) in functions.getData('content', f'WHERE id=\"{vidId}\"'):
+		accountPath = f'{rootDownloadDir}/{childfrom}'
+		pathDictionary = {
+			'audio': f'{rootDownloadDir}/{childfrom}/{videopath}.mp3',
+			'video': f'{rootDownloadDir}/{childfrom}/{videopath}.{extention}',
+			'thumbnail': f'{rootDownloadDir}/{childfrom}/thumbnail/{videopath}.jpg',
+			'description': f'{rootDownloadDir}/{childfrom}/description/{videopath}.txt'
+		}
+
+	humanReadableSize = functions.humanReadableSize(pathDictionary['video'])
+
+	# Send the video file to the user
+	statusMessage = context.bot.send_message(chat_id=chat_id, text=f"Uploading video ({humanReadableSize}) to file.io 1/4\nThis could take a while.")
+	animationMessage = context.bot.send_message(chat_id=chat_id, text="⏳")
+
+	with open(pathDictionary['description'], 'r') as file:
+		description = file.read()
+
+	link = functions.uploadFile(title, description, pathDictionary['video'])
+
+	# Video
+	context.bot.send_message(chat_id=chat_id, text=link)
+	context.bot.delete_message(chat_id=chat_id, message_id=animationMessage.message_id)
+
+	# Audio
+	context.bot.edit_message_text(chat_id=chat_id, message_id=statusMessage.message_id, text="Generating Audio from Video 2/4")
+	animationMessage = context.bot.send_message(chat_id=chat_id, text="⏳")
+	functions.subprocess.call(['ffmpeg', '-y', '-i', pathDictionary['video'], '-vn', '-acodec', 'libmp3lame', '-qscale:a', '2', '-metadata', f'artist={childfrom}', '-metadata', f'title={title}','-loglevel', 'quiet', pathDictionary['audio']])
+	context.bot.send_audio(chat_id=chat_id, audio=open(pathDictionary['audio'], 'rb'), caption='')
+	context.bot.delete_message(chat_id=chat_id, message_id=animationMessage.message_id)
+	functions.os.remove(pathDictionary['audio'])
+
+	# Thumbnail
+	context.bot.edit_message_text(chat_id=chat_id, message_id=statusMessage.message_id, text="Sending Thumbnail 3/4")
+	context.bot.send_document(chat_id=chat_id, document=open(pathDictionary['thumbnail'], 'rb'), caption='')
+
+	# Description
+	context.bot.edit_message_text(chat_id=chat_id, message_id=statusMessage.message_id, text="Sending Description 4/4")
+	context.bot.send_document(chat_id=chat_id, document=open(pathDictionary['description'], 'rb'), caption='')
+
+	# Cleanup
+	context.bot.delete_message(chat_id=chat_id, message_id=statusMessage.message_id)
+
 
 def get_info(update, context):
 	"""Listen for user input and do an if statement."""
@@ -483,6 +578,64 @@ def link(update, context):
 
 	context.user_data["next_handler"] = ""
 
+def delete(update, context):
+	chat_id = update.message.chat_id
+
+	# Check if the user is allowed to use the bot
+	if is_allowed_user(update, context) is False:
+		context.bot.send_message(chat_id=chat_id, text="Sorry, you are not authorized to use this bot.")
+		return
+
+	initialUserMessageId = update.message.message_id
+	message_text = update.message.text
+	link = message_text[8:]
+	
+	if not link:
+		message = context.bot.send_message(chat_id=chat_id, text="Send a link in the format: /delete youtu.be/VIDID")
+		responseMessageId = message.message_id
+		time.sleep(3)
+		context.bot.delete_message(chat_id=chat_id, message_id=responseMessageId)
+		context.bot.delete_message(chat_id=chat_id, message_id=initialUserMessageId)
+		return
+
+	isYtLink, ytLinkType, ytLinkId, ytLinkIdClean = functions.isYtLink(link)
+	if isYtLink is False:
+		message = context.bot.send_message(chat_id=chat_id, text="Send a youtube: Channel, Video ❌")
+		responseMessageId = message.message_id
+		time.sleep(3)
+		context.bot.delete_message(chat_id=chat_id, message_id=responseMessageId)
+		context.bot.delete_message(chat_id=chat_id, message_id=initialUserMessageId)
+		return
+
+	if ytLinkType == 'video':
+		entryExists = False
+		for x in functions.getData('content', f'WHERE id=\"{ytLinkId}\"'):
+			entryExists = True
+
+		if entryExists:
+			for (name, id, priority, authenticated) in functions.getData('chatid', f'WHERE id=\"{chat_id}\"'):
+				if priority == '1':
+					message = context.bot.send_message(chat_id=chat_id, text="Deleting video ⏳")
+					functions.delVid(ytLinkId)
+					time.sleep(0.5)
+					context.bot.edit_message_text(chat_id=chat_id, message_id=message.message_id, text="Video deleted from backup. ✅")
+				else:
+					context.bot.send_message(chat_id=chat_id, text="Sent removal request to host ⏳")
+					functions.msgHost(f"User, {name} just requested to remove https://youtu.be/{ytLinkId}")
+		else:
+			message = context.bot.send_message(chat_id=chat_id, text="Video was not downloaded. ✅")
+			responseMessageId = message.message_id
+			time.sleep(1.5)
+			context.bot.delete_message(chat_id=chat_id, message_id=initialUserMessageId)
+			context.bot.delete_message(chat_id=chat_id, message_id=responseMessageId)
+
+	elif ytLinkType == 'channel':
+		entryExists = False
+		for x in functions.getData('account', f'WHERE id=\"{ytLinkId}\"'):
+			entryExists = True
+
+
+
 def error(update, context):
 	"""Echo the user message."""
 	update.message.reply_text(f"Unknown command: {update.message.text}")
@@ -500,6 +653,8 @@ def main():
 	dp.add_handler(CommandHandler("help", helpMenu))
 	dp.add_handler(CommandHandler("passwd", check_password))
 	dp.add_handler(CommandHandler("latest", ask_latest))
+	dp.add_handler(CommandHandler("delete", delete))
+	dp.add_handler(CommandHandler("send", sendContent))
 	dp.add_handler(CallbackQueryHandler(buttonResolver))
 	dp.add_handler(CommandHandler("info", get_info))
 	dp.add_handler(MessageHandler(Filters.text & (~Filters.command), link))
