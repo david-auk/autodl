@@ -38,8 +38,9 @@ def helpMenu(update, context):
 							  'Aurhorise using: /passwd\n\n'
 							  'Send me a link!\n'
 							  'I\'ll download the link or add a channel to backup\n\n'
-							  'View the latest downloaded videos with: /latest \n'
-							  '/info - Get info about a link')
+							  'View the latest videos with: /latest \n'
+							  '/info - Get info about a link\n'
+							  '/send VIDID to view the content')
 
 def is_allowed_user(update, context):
 	"""Check if the current user ID is allowed."""
@@ -62,7 +63,6 @@ def check_password(update, context):
 	# Get the chat ID
 	chat_id = update.message.chat_id
 	userMessageId = update.message.message_id
-
 
 	if is_allowed_user(update, context):
 		message = context.bot.send_message(chat_id=chat_id, text="Already authorized ✅")
@@ -253,11 +253,17 @@ def buttonResolver(update, context):
 		context.user_data["channelChatInfo"] = channelChatInfo
 
 def sendContent(update, context):
+	chat_id = update.message.chat_id
+
+	# Check if the user is allowed to use the bot
+	if is_allowed_user(update, context) is False:
+		context.bot.send_message(chat_id=chat_id, text="Sorry, you are not authorized to use this bot.")
+		return
+
 	initialUserMessageId = update.message.message_id
 	message_text = update.message.text
-	chat_id = update.message.chat_id
 	link = message_text[6:]
-	
+
 	if link:
 		isYtLink, ytLinkType, ytLinkId, ytLinkIdClean = functions.isYtLink(link)
 
@@ -573,9 +579,15 @@ def link(update, context):
 	context.user_data["next_handler"] = ""
 
 def delete(update, context):
+	chat_id = update.message.chat_id
+
+	# Check if the user is allowed to use the bot
+	if is_allowed_user(update, context) is False:
+		context.bot.send_message(chat_id=chat_id, text="Sorry, you are not authorized to use this bot.")
+		return
+
 	initialUserMessageId = update.message.message_id
 	message_text = update.message.text
-	chat_id = update.message.chat_id
 	link = message_text[8:]
 	
 	if not link:
