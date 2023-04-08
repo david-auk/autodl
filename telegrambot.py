@@ -282,6 +282,7 @@ def sendContent(update, context):
 					functions.msgHost(f"Server is sending User, {name}: `{ytLinkId}`", True)
 				
 				sendActualContent(update, context, vidId)
+				return
 
 		else:
 			message = context.bot.send_message(chat_id=chat_id, text="Video not found. ❌")
@@ -326,9 +327,10 @@ def sendActualContent(update, context, vidId):
 	# Video
 	context.bot.send_message(chat_id=chat_id, text=link)
 	context.bot.delete_message(chat_id=chat_id, message_id=animationMessage.message_id)
+	context.bot.delete_message(chat_id=chat_id, message_id=statusMessage.message_id)
 
 	# Audio
-	context.bot.edit_message_text(chat_id=chat_id, message_id=statusMessage.message_id, text="Generating Audio from Video 2/4")
+	statusMessage = context.bot.send_message(chat_id=chat_id, text="Generating Audio from Video 2/4")
 	animationMessage = context.bot.send_message(chat_id=chat_id, text="⏳")
 	functions.subprocess.call(['ffmpeg', '-y', '-i', pathDictionary['video'], '-vn', '-acodec', 'libmp3lame', '-qscale:a', '2', '-metadata', f'artist={childfrom}', '-metadata', f'title={title}','-loglevel', 'quiet', pathDictionary['audio']])
 	context.bot.send_audio(chat_id=chat_id, audio=open(pathDictionary['audio'], 'rb'), caption='')
