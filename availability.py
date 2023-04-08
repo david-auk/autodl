@@ -36,16 +36,16 @@ def checkingAndInforming(title, id, childfrom, videopath, extention, subtitles, 
 			functions.chData('content', id, 'deletedtype', avalibilityType)
 			functions.chData('content', id, 'deleteddate', formattedDate)
 			if avalibilityType == 'Private':
-				functions.msgAll(f"{title} from \'{childfrom}\' just got Privated, not Deleted ")
+				functions.msgAll(f"{title} from \'{childfrom}\' just got Privated, not Deleted\n\n/send `{id}`", True)
 			else:
 				if avalibilityType == 'Deleted':
-					functions.msgAll(f"{title} from \'{childfrom}\' just got Deleted, not Privated")
+					functions.msgAll(f"{title} from \'{childfrom}\' just got Deleted, not Privated\n\n/send `{id}`", True)
 				else:
 					if avalibilityType == 'Unlisted':
-						functions.msgAll(f"{title} from \'{childfrom}\' just got Unlisted \nhttps://www.youtube.com/watch?v={id}")
+						functions.msgAll(f"{title} from \'{childfrom}\' just got Unlisted\n\nhttps://www.youtube.com/watch?v={id}")
 					else:
 						if avalibilityType == 'Striked':
-							functions.msgAll(f"{title} from \'{childfrom}\' just got Striked by \'{striker}\'")
+							functions.msgAll(f"{title} from \'{childfrom}\' just got Striked by \'{striker}\'\n\n/send `{id}`", True)
 	# If the content is avalible
 	else:
 		if deleted == 1: # Video status just got back online

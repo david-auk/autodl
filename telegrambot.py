@@ -253,24 +253,92 @@ def buttonResolver(update, context):
 		context.user_data["channelChatInfo"] = channelChatInfo
 
 def sendContent(update, context):
+	initialUserMessageId = update.message.message_id
+	message_text = update.message.text
 	chat_id = update.message.chat_id
-	vidId=''
+	link = message_text[6:]
+	
+	if link:
+		isYtLink, ytLinkType, ytLinkId, ytLinkIdClean = functions.isYtLink(link)
+
+		if ytLinkType == 'video':
+			vidId = ytLinkId
+		else:
+			vidId = link
+
+		entryExists = False
+		for x in functions.getData('content', f'WHERE id=\"{vidId}\"'):
+			entryExists = True
+
+		if entryExists:
+			for (name, id, priority, authenticated) in functions.getData('chatid', f'WHERE id=\"{chat_id}\"'):
+				if priority != '1':
+					functions.msgHost(f"Server is sending User, {name}: `{ytLinkId}`", True)
+				
+				sendActualContent(update, context, vidId)
+
+		else:
+			message = context.bot.send_message(chat_id=chat_id, text="Video not found. ❌")
+			responseMessageId = message.message_id
+			time.sleep(3)
+			context.bot.delete_message(chat_id=chat_id, message_id=initialUserMessageId)
+			context.bot.delete_message(chat_id=chat_id, message_id=responseMessageId)
+
+	else:
+		message = context.bot.send_message(chat_id=chat_id, text="Send a link in the format: /send VIDID | /send youtu.be/VIDID")
+		responseMessageId = message.message_id
+		time.sleep(5)
+		context.bot.delete_message(chat_id=chat_id, message_id=responseMessageId)
+		context.bot.delete_message(chat_id=chat_id, message_id=initialUserMessageId)
+		return
+
+def sendActualContent(update, context, vidId):
+	chat_id = update.message.chat_id
 
 	# Getting facts
 	rootDownloadDir = secret.configuration['general']['backupDir']
 	for (title, id, childfrom, videopath, extention, subtitles, uploaddate, downloaddate, deleteddate, deleted, deletedtype, writtenrequestuser) in functions.getData('content', f'WHERE id=\"{vidId}\"'):
 		accountPath = f'{rootDownloadDir}/{childfrom}'
 		pathDictionary = {
+			'audio': f'{rootDownloadDir}/{childfrom}/{videopath}.mp3',
 			'video': f'{rootDownloadDir}/{childfrom}/{videopath}.{extention}',
 			'thumbnail': f'{rootDownloadDir}/{childfrom}/thumbnail/{videopath}.jpg',
 			'description': f'{rootDownloadDir}/{childfrom}/description/{videopath}.txt'
 		}
 
+	humanReadableSize = functions.humanReadableSize(pathDictionary['video'])
+
 	# Send the video file to the user
-	
+	statusMessage = context.bot.send_message(chat_id=chat_id, text=f"Uploading video ({humanReadableSize}) to file.io 1/4\nThis could take a while.")
+	animationMessage = context.bot.send_message(chat_id=chat_id, text="⏳")
+
+	with open(pathDictionary['description'], 'r') as file:
+		description = file.read()
+
+	link = functions.uploadFile(title, description, pathDictionary['video'])
+
+	# Video
+	context.bot.send_message(chat_id=chat_id, text=link)
+	context.bot.delete_message(chat_id=chat_id, message_id=animationMessage.message_id)
+
+	# Audio
+	context.bot.edit_message_text(chat_id=chat_id, message_id=statusMessage.message_id, text="Generating Audio from Video 2/4")
+	animationMessage = context.bot.send_message(chat_id=chat_id, text="⏳")
+	functions.subprocess.call(['ffmpeg', '-y', '-i', pathDictionary['video'], '-vn', '-acodec', 'libmp3lame', '-qscale:a', '2', '-metadata', f'artist={childfrom}', '-metadata', f'title={title}','-loglevel', 'quiet', pathDictionary['audio']])
+	context.bot.send_audio(chat_id=chat_id, audio=open(pathDictionary['audio'], 'rb'), caption='')
+	context.bot.delete_message(chat_id=chat_id, message_id=animationMessage.message_id)
+	functions.os.remove(pathDictionary['audio'])
+
+	# Thumbnail
+	context.bot.edit_message_text(chat_id=chat_id, message_id=statusMessage.message_id, text="Sending Thumbnail 3/4")
 	context.bot.send_document(chat_id=chat_id, document=open(pathDictionary['thumbnail'], 'rb'), caption='')
+
+	# Description
+	context.bot.edit_message_text(chat_id=chat_id, message_id=statusMessage.message_id, text="Sending Description 4/4")
 	context.bot.send_document(chat_id=chat_id, document=open(pathDictionary['description'], 'rb'), caption='')
-	context.bot.send_video(chat_id=chat_id, video=open(pathDictionary['video'], 'rb'), caption='')
+
+	# Cleanup
+	context.bot.delete_message(chat_id=chat_id, message_id=statusMessage.message_id)
 
 
 def get_info(update, context):

@@ -6,6 +6,7 @@ import secret
 import datetime
 import subprocess
 import shutil
+import time
 import os
 import re
 
@@ -199,6 +200,24 @@ def delVid(vidId):
 	# Deleting entry from DB
 	delData('content', vidId)
 
+def uploadFile(title, description, path):
+	url = 'https://file.io/'
+	headers = {
+		'accept': 'application/json'
+	}
+	data = {
+		'title': title,
+		'description': description,
+		'maxDownloads': '1',
+		'autoDelete': 'true'
+	}
+	files = {
+		'file': (path, open(path, 'rb'), 'multipart/form-data')
+	}
+	response = requests.post(url, headers=headers, data=data, files=files)
+
+	return response.json()['link']
+
 def escapeMarkdown(text):
 	escape_list = ['*', '_', '`']
 	formatedQuote = ''.join(['\\'+c if c in escape_list else c for c in text])
@@ -219,12 +238,19 @@ def msgHost(query, usingMarkdown):
 		requests.get(f"https://api.telegram.org/bot{telegramToken}/sendMessage?chat_id={hostChatId}&text={formatedQuote}")
 
 # Function that messages every chatid from secret.py
-def msgAll(query):
+def msgAll(query, usingMarkdown):
 	telegramToken = secret.telegram['credentials']['token']
-	formatedQuote = urllib.parse.quote(query)
-	for x in getData("chatid", 'ALL'):
-		currentUserChatId = x[1]
-		requests.get(f"https://api.telegram.org/bot{telegramToken}/sendMessage?chat_id={currentUserChatId}&text={formatedQuote}")
+	if usingMarkdown:
+		escape_list = ['>', '-', ']', '[', '.', '}', '{', '|', ')', '(', '#', '!', '=', '+']
+		formatedQuote = ''.join(['\\'+c if c in escape_list else c for c in query])
+		for x in getData("chatid", 'ALL'):
+			currentUserChatId = x[1]
+			Bot(token=secret.telegram['credentials']['token']).send_message(chat_id=currentUserChatId, text=formatedQuote, parse_mode=ParseMode.MARKDOWN_V2)
+	else:
+		formatedQuote = urllib.parse.quote(query)
+		for x in getData("chatid", 'ALL'):
+			currentUserChatId = x[1]
+			requests.get(f"https://api.telegram.org/bot{telegramToken}/sendMessage?chat_id={currentUserChatId}&text={formatedQuote}")
 
 # Function for downloading video
 def downloadVid(vidId, channelTitle, filename):
@@ -389,6 +415,22 @@ def getFacts(vidId):
 		info = 'N/A'
 
 	return success, info
+
+def humanReadableSize(path):
+	# Get the size of the file in bytes
+	file_size = os.path.getsize(path)
+
+	# Convert to a human-readable format
+	size_suffixes = ['B', 'KB', 'MB', 'GB', 'TB']  # List of size suffixes
+	size_suffix_index = 0  # Initialize index of the size suffix
+
+	while file_size > 1024 and size_suffix_index < len(size_suffixes)-1:
+		file_size /= 1024
+		size_suffix_index += 1
+
+	human_readable_size = f"{file_size:.2f} {size_suffixes[size_suffix_index]}"
+
+	return human_readable_size
 
 def getChannelFacts(link):
 	link = f"https://youtube.com/channel/{link}"
