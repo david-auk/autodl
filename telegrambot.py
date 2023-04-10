@@ -483,7 +483,7 @@ def searchList(update, context, info, page_number):
 	latestContent = ''
 	keyboard = [[],[]]
 
-	page_size = 10
+	page_size = 5
 
 	pageInfo['page_number'] = page_number
 	pageInfo['chat_id'] = info['chat_id']
@@ -512,10 +512,11 @@ def searchList(update, context, info, page_number):
 			else:
 				sortBy = 'downloaddate'
 
-			dataRequest = functions.getData(table, f"WHERE {' AND '.join(conditions)} ORDER BY {sortBy} ASC LIMIT {limit} OFFSET {offset}")
+			#dataRequest = functions.getData(table, f"WHERE {' AND '.join(conditions)} ORDER BY {sortBy} ASC LIMIT {limit} OFFSET {offset}")
+			dataRequest = functions.getData(table, f"WHERE {' AND '.join(conditions)} ORDER BY {sortBy} DESC LIMIT {limit} OFFSET {offset}")
 		else:
-			#dataRequest = functions.getData(table, f'ORDER BY downloaddate DESC LIMIT {limit} OFFSET {offset}')
-			dataRequest = functions.getData(table, f'ORDER BY downloaddate ASC LIMIT {limit} OFFSET {offset}')
+			dataRequest = functions.getData(table, f'ORDER BY downloaddate DESC LIMIT {limit} OFFSET {offset}')
+			#dataRequest = functions.getData(table, f'ORDER BY downloaddate ASC LIMIT {limit} OFFSET {offset}')
 	elif table == 'account':
 		if info['listArgs']: # If there are arguments
 			dataRequest = functions.getData(table, f"WHERE {' AND '.join(conditions)} ORDER BY title ASC LIMIT {limit} OFFSET {offset}")
@@ -548,8 +549,15 @@ def searchList(update, context, info, page_number):
 		if page_number == 1:
 			keyboard[0].append(InlineKeyboardButton("🗑️", callback_data="delete"))			
 		keyboard[0].append(InlineKeyboardButton("➡️", callback_data="pageForward"))
+	else:
+		if page_number == 1:
+			keyboard[0].append(InlineKeyboardButton("🗑️", callback_data="delete"))
 
 	reply_markup = InlineKeyboardMarkup(keyboard)
+
+#	print(latestContent)
+
+#	return
 
 	context.bot.edit_message_text(chat_id=info['chat_id'], message_id=info['message_id'], text=latestContent, parse_mode='MarkdownV2', reply_markup=reply_markup)
 
