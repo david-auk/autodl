@@ -180,6 +180,10 @@ def listCount(table, info):
 				value = int(value)
 				conditions.append(f"{key}='{value}'")
 			else:
+				#words = value.split()
+				#word_conditions = [f"{key} LIKE '%{word}%' COLLATE utf8mb4_general_ci" for word in words]
+				#condition = " AND ".join(word_conditions)
+				#conditions.append(f"({condition})")
 				conditions.append(f"{key} LIKE '%{value}%' COLLATE utf8mb4_general_ci")
 		totalRows = functions.countData(table, f"WHERE {' AND '.join(conditions)}")
 	else:
@@ -499,6 +503,10 @@ def searchList(update, context, info, page_number):
 				value = int(value)
 				conditions.append(f"{key}='{value}'")
 			else:
+				#words = value.split()
+				#word_conditions = [f"{key} LIKE '%{word} %' COLLATE utf8mb4_general_ci" for word in words]
+				#condition = " AND ".join(word_conditions)
+				#conditions.append(f"({condition})")
 				conditions.append(f"{key} LIKE '%{value}%' COLLATE utf8mb4_general_ci")
 
 	offset = (page_number - 1) * page_size
