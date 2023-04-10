@@ -305,7 +305,10 @@ def buttonResolver(update, context):
 			page_number -= 1
 
 		elif responce == 'delete':
-			pass
+			context.user_data["next_handler"] = 'listButtonHandler'
+			query.data = '{\'nextArg\': \'placeholder\', \'value\': True}'
+			buttonResolver(update, context)
+			return
 
 		searchList(update, context, pageInfo['listDataInfo'], page_number)		
 
@@ -351,6 +354,7 @@ def buttonResolver(update, context):
 		if nextArg == 'search':
 			context.user_data["next_handler"] = 'page'
 			context.user_data['listDataInfo'] = ''
+			listDataInfo['maxNumber'] = listCount(listDataInfo['table'], listArgs)
 			context.user_data['pageInfo'] = {'listDataInfo': listDataInfo}
 			searchList(update, context, listDataInfo, 1)
 			return
@@ -456,19 +460,19 @@ def buttonResolver(update, context):
 			else:
 				keyboard[1].append(InlineKeyboardButton("✅ Title", callback_data="{'nextArg': 'title', 'value': 'waitingForInput'}"))
 
-		keyboard[2].append(InlineKeyboardButton("🔍 Search", callback_data="{'nextArg': 'search', 'value': True}"))
-		keyboard[2].append(InlineKeyboardButton("Cancel", callback_data="{'nextArg': 'cancel', 'value': True}"))
-
 		if buttons is False:
 			context.user_data["next_handler"] = "listTextHandler"
 			reply_markup = InlineKeyboardMarkup(keyboard)
-			listDataInfo['reply_markup'] = reply_markup
+			listDataInfo['keyboard'] = keyboard
 			listDataInfo['filters'] = filters
 			keyboard = [[],[],[]]
 			keyboard[1].append(InlineKeyboardButton("Cancel", callback_data="{'nextArg': 'cancel', 'value': True}"))	
 			rowsFound = 'Input'
 		else:
-			rowsFound = listCount(listDataInfo['table'], listArgs)		
+			rowsFound = listCount(listDataInfo['table'], listArgs)
+			if rowsFound != 0:
+				keyboard[2].append(InlineKeyboardButton("🔍 Search", callback_data="{'nextArg': 'search', 'value': True}"))
+			keyboard[2].append(InlineKeyboardButton("Cancel", callback_data="{'nextArg': 'cancel', 'value': True}"))
 
 		filters += filtersToAddLater
 
@@ -484,11 +488,12 @@ def buttonResolver(update, context):
 def searchList(update, context, info, page_number):
 	pageInfo = context.user_data.get("pageInfo")
 	table = info['table']
+	maxNumber = info['maxNumber']
 	latestContent = ''
 	keyboard = [[],[]]
 
 	page_size = 5
-
+	
 	pageInfo['page_number'] = page_number
 	pageInfo['chat_id'] = info['chat_id']
 	pageInfo['message_id'] = info['message_id']
@@ -514,60 +519,84 @@ def searchList(update, context, info, page_number):
 
 	if table == 'content':
 		if info['listArgs']: # If there are arguments
-			#dataRequest = functions.getData(table, f"WHERE {' AND '.join(conditions)} ORDER BY downloaddate DESC LIMIT {limit} OFFSET {offset}")
 			if 'deleted' in info['listArgs']:
 				sortBy = 'deleteddate'
 			else:
 				sortBy = 'downloaddate'
-
-			#dataRequest = functions.getData(table, f"WHERE {' AND '.join(conditions)} ORDER BY {sortBy} ASC LIMIT {limit} OFFSET {offset}")
+			hasConditions = True
 			dataRequest = functions.getData(table, f"WHERE {' AND '.join(conditions)} ORDER BY {sortBy} DESC LIMIT {limit} OFFSET {offset}")
 		else:
+			hasConditions = False
 			dataRequest = functions.getData(table, f'ORDER BY downloaddate DESC LIMIT {limit} OFFSET {offset}')
-			#dataRequest = functions.getData(table, f'ORDER BY downloaddate ASC LIMIT {limit} OFFSET {offset}')
 	elif table == 'account':
 		if info['listArgs']: # If there are arguments
+			hasConditions = True
 			dataRequest = functions.getData(table, f"WHERE {' AND '.join(conditions)} ORDER BY title ASC LIMIT {limit} OFFSET {offset}")
 		else:
+			hasConditions = False
 			dataRequest = functions.getData(table, f'ORDER BY title ASC LIMIT {limit} OFFSET {offset}')
 
 
 	number = offset
 	if table == 'content':
-		for (title, id, childfrom, videopath, extention, subtitles, uploaddate, downloaddate, deleteddate, deleted, deletedtype, requestuser) in dataRequest:
-			number += 1
-			latestContent += f"\n{number}\\. *{functions.escapeMarkdownAll(childfrom)}* \\| `{id}` \\| {functions.escapeMarkdownAll(title)}\n"
+		if maxNumber == 1:
+			for (title, id, childfrom, videopath, extention, subtitles, uploaddate, downloaddate, deleteddate, deleted, deletedtype, requestuser) in dataRequest:
+				number += 1
+				latestContent += f"\n*{functions.escapeMarkdownAll(childfrom)}* \\| `{id}` \\| {functions.escapeMarkdownAll(title)}\n"
+		else:
+			if hasConditions:
+				for (title, id, childfrom, videopath, extention, subtitles, uploaddate, downloaddate, deleteddate, deleted, deletedtype, requestuser) in dataRequest:
+					number += 1
+					latestContent += f"\n{number}\\. *{functions.escapeMarkdownAll(childfrom)}* \\| `{id}` \\| {functions.escapeMarkdownAll(title)}\n"
+			else: # The user wants to view all data
+				for (title, id, childfrom, videopath, extention, subtitles, uploaddate, downloaddate, deleteddate, deleted, deletedtype, requestuser) in dataRequest:
+					
+					number += 1
+					formattedDate = functions.getDate(str(downloaddate))
+					latestContent += f"\n{number}\\. *{functions.escapeMarkdownAll(childfrom)}* \\| `{id}` \\| {functions.escapeMarkdownAll(title)} \\| {formattedDate[0]}, {formattedDate[3]}:{formattedDate[4]}\n"
+	elif table == 'account':
+		if maxNumber == 1:
+			for (channelTitle, id, priority, pullError) in dataRequest:
+				number += 1
+				latestContent += f"\n*{functions.escapeMarkdownAll(channelTitle)}* \\| {priority}\nhttps://youtube\\.com/channel/{functions.escapeMarkdownAll(id)}\n"
+		else:
+			for (channelTitle, id, priority, pullError) in dataRequest:
+				number += 1
+				latestContent += f"\n{number}\\. *{functions.escapeMarkdownAll(channelTitle)}* \\| {priority}\nhttps://youtube\\.com/channel/{functions.escapeMarkdownAll(id)}\n"
 
 	elif table == 'account':
 		pass
 
 	if (number - offset) == page_size: #max entries reached
-		pageInfo['fullPage'] = True
+		fullPage = True
 	else:
-		pageInfo['fullPage'] = False
+		fullPage = False
+
+	if number == maxNumber:
+		finalPage = True
+	else:
+		finalPage = False
 
 	if page_number != 1:
 		keyboard[0].append(InlineKeyboardButton("⬅️", callback_data="pageBack"))
-		if pageInfo['fullPage']: # It isnt the last page
+		if fullPage and finalPage is False: # It isnt the last page
 			keyboard[1].append(InlineKeyboardButton("🗑️", callback_data="delete"))
 		else: # It is the last page
 			keyboard[0].append(InlineKeyboardButton("🗑️", callback_data="delete"))
 
-	if pageInfo['fullPage']:
+	if fullPage:
 		if page_number == 1:
-			keyboard[0].append(InlineKeyboardButton("🗑️", callback_data="delete"))			
-		keyboard[0].append(InlineKeyboardButton("➡️", callback_data="pageForward"))
+			keyboard[0].append(InlineKeyboardButton("🗑️", callback_data="delete"))
+		if finalPage is False:
+			keyboard[0].append(InlineKeyboardButton("➡️", callback_data="pageForward"))
 	else:
 		if page_number == 1:
 			keyboard[0].append(InlineKeyboardButton("🗑️", callback_data="delete"))
 
 	reply_markup = InlineKeyboardMarkup(keyboard)
-
-#	print(latestContent)
-
-#	return
-
 	context.bot.edit_message_text(chat_id=info['chat_id'], message_id=info['message_id'], text=latestContent, parse_mode='MarkdownV2', reply_markup=reply_markup)
+
+	context.user_data['listDataInfo'] = info
 
 	context.user_data['pageInfo'] = pageInfo
 
@@ -779,11 +808,19 @@ def link(update, context):
 
 		rowsFound = listCount(listDataInfo['table'], listArgs)
 
+		keyboard = listDataInfo['keyboard']
+
+		if rowsFound != 0:
+			keyboard[2].append(InlineKeyboardButton("🔍 Search", callback_data="{'nextArg': 'search', 'value': True}"))
+		keyboard[2].append(InlineKeyboardButton("Cancel", callback_data="{'nextArg': 'cancel', 'value': True}"))
+
+		reply_markup = InlineKeyboardMarkup(keyboard)
+
 		filters += f'\n(includes) {keyName}: {listArgs[key]}'
 		filtersMarkdownFree = functions.escapeMarkdownAll(filters)
 		
 		context.bot.delete_message(chat_id=chat_id, message_id=userMessageId)
-		context.bot.edit_message_text(chat_id=listDataInfo['chat_id'], message_id=listDataInfo['message_id'], text=f"Find all in *{listDataInfo['tableAlias']}* where:\t\\({rowsFound}\\)\n{filtersMarkdownFree}", parse_mode='MarkdownV2', reply_markup=listDataInfo['reply_markup'])
+		context.bot.edit_message_text(chat_id=listDataInfo['chat_id'], message_id=listDataInfo['message_id'], text=f"Find all in *{listDataInfo['tableAlias']}* where:\t\\({rowsFound}\\)\n{filtersMarkdownFree}", parse_mode='MarkdownV2', reply_markup=reply_markup)
 
 		listDataInfo['listArgs'] = listArgs
 		context.user_data['listDataInfo'] = listDataInfo
