@@ -139,9 +139,11 @@ def countData(table, inputstatement):
 	countDataCursor = mydb.cursor(buffered=True)
 	column = 'id'
 	if inputstatement == 'ALL':
-		statement = f'SELECT COUNT(ALL {column}) FROM {table}'
+		#statement = f'SELECT COUNT(ALL {column}) FROM {table}'
+		statement = f'SELECT COUNT(*) FROM {table}'
 	else:
-		statement = f'SELECT COUNT(ALL {column}) FROM {table} {inputstatement}'
+		#statement = f'SELECT COUNT(ALL {column}) FROM {table} {inputstatement}'
+		statement = f'SELECT COUNT(*) FROM {table} {inputstatement}'
 
 	countDataCursor.execute(statement)
 	for x in countDataCursor:
@@ -220,6 +222,11 @@ def uploadFile(title, description, path):
 
 def escapeMarkdown(text):
 	escape_list = ['*', '_', '`']
+	formatedQuote = ''.join(['\\'+c if c in escape_list else c for c in text])
+	return formatedQuote
+
+def escapeMarkdownAll(text):
+	escape_list = ['>', '-', ']', '[', '.', '}', '{', '|', ')', '(', '#', '!', '=', '+']
 	formatedQuote = ''.join(['\\'+c if c in escape_list else c for c in text])
 	return formatedQuote
 

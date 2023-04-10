@@ -149,6 +149,44 @@ def ask_latest(update, context):
 	context.user_data["latestRequestInfo"] = {'message_id': f'{message.message_id}', 'chat_id': f'{chat_id}', 'userMessage_id': f'{userMessageId}'}
 	context.user_data["next_handler"] = "latest"
 
+def listData(update, context):
+	innitialUserMessageId = update.message.message_id
+	chat_id = update.message.chat_id
+
+	if is_allowed_user(update, context) is False:
+		context.bot.send_message(chat_id=update.message.chat_id, text="Sorry, you are not authorized to use this bot.")
+		return
+
+	keyboard = [[InlineKeyboardButton("Content 🍿", callback_data="{'nextArg': 'table', 'value': 'content'}"),InlineKeyboardButton("Channel 🗃️", callback_data="{'nextArg': 'table', 'value': 'account'}"),InlineKeyboardButton("Cancel", callback_data="{'nextArg': 'cancel', 'value': True}")]]
+	reply_markup = InlineKeyboardMarkup(keyboard)
+
+	message = context.bot.send_message(chat_id=chat_id, text=f'List type:', reply_markup=reply_markup)
+	context.user_data["listDataInfo"] = {'message_id': message.message_id, 'chat_id': chat_id, 'userMessage_id': innitialUserMessageId, 'listArgs': {}}
+	context.user_data["next_handler"] = "listButtonHandler"
+
+def listCount(table, info):
+	for key in info:
+		if info[key] == 'waitingForInput':
+			return
+
+	column_mapping = {'from': 'childfrom', 'requester': 'requestuser'}
+
+	conditions = []
+	if info:
+		for key, value in info.items():
+			if key in column_mapping:
+				key = column_mapping[key]
+			if isinstance(value, bool):
+				value = int(value)
+				conditions.append(f"{key}='{value}'")
+			else:
+				conditions.append(f"{key} LIKE '%{value}%' COLLATE utf8mb4_general_ci")
+		totalRows = functions.countData(table, f"WHERE {' AND '.join(conditions)}")
+	else:
+		totalRows = functions.countData(table, 'ALL')
+
+	return totalRows
+
 def buttonResolver(update, context):
 	"""Handle the button press."""
 	#chat_id = update.message.chat_id
@@ -252,6 +290,271 @@ def buttonResolver(update, context):
 		context.user_data["next_handler"] = 'channel_name'
 		context.user_data["channelChatInfo"] = channelChatInfo
 
+	elif buttonHandler == 'page':
+		pageInfo = context.user_data.get("pageInfo")
+		page_number = pageInfo['page_number']
+		responce = query.data
+		if responce == 'pageForward':
+			page_number += 1
+
+		elif responce == 'pageBack':
+			page_number -= 1
+
+		elif responce == 'delete':
+			pass
+
+		searchList(update, context, pageInfo['listDataInfo'], page_number)		
+
+	elif buttonHandler == 'listTextHandler': # The handler already changed but the user chose a button
+		listDataInfo = context.user_data.get("listDataInfo")
+		listArgs = listDataInfo['listArgs']
+
+		prevResponceDict = eval(query.data)
+
+		if prevResponceDict['nextArg'] == 'cancel':
+			context.bot.edit_message_text(chat_id=listDataInfo['chat_id'], message_id=listDataInfo['message_id'], text="Canceled request.")
+			time.sleep(1.5)
+			context.bot.delete_message(chat_id=listDataInfo['chat_id'], message_id=listDataInfo['message_id'])
+			context.bot.delete_message(chat_id=listDataInfo['chat_id'], message_id=listDataInfo['userMessage_id'])
+			context.user_data["next_handler"] = ''
+			context.user_data['listDataInfo'] = ''
+			return
+
+	elif buttonHandler == 'listButtonHandler':
+		listDataInfo = context.user_data.get("listDataInfo")
+		listArgs = listDataInfo['listArgs']
+
+		buttons = True
+
+		prevResponceDict = eval(query.data)
+		prevResponceValue = prevResponceDict['value']
+		nextArg = prevResponceDict['nextArg']
+
+		filters = ''
+		filtersToAddLater = ''
+
+		keyboard = [[],[],[]]
+
+		if nextArg == 'cancel':
+			context.bot.edit_message_text(chat_id=listDataInfo['chat_id'], message_id=listDataInfo['message_id'], text="Canceled request.")
+			time.sleep(1.5)
+			context.bot.delete_message(chat_id=listDataInfo['chat_id'], message_id=listDataInfo['message_id'])
+			context.bot.delete_message(chat_id=listDataInfo['chat_id'], message_id=listDataInfo['userMessage_id'])
+			context.user_data["next_handler"] = ''
+			context.user_data['listDataInfo'] = ''
+			return
+
+		if nextArg == 'search':
+			context.user_data["next_handler"] = 'page'
+			context.user_data['listDataInfo'] = ''
+			context.user_data['pageInfo'] = {'listDataInfo': listDataInfo}
+			searchList(update, context, listDataInfo, 1)
+			return
+
+		if nextArg == 'table':
+			listDataInfo['table'] = prevResponceValue
+			nextArg = ''
+
+		if listDataInfo['table'] == 'content':
+			listDataInfo['tableAlias'] = 'Content'
+
+			if nextArg == 'subtitles':
+				if prevResponceValue is False:
+					del listArgs['subtitles']
+				else:
+					listArgs['subtitles'] = prevResponceValue
+
+			if nextArg == 'deleted':
+				if prevResponceValue is False:
+					del listArgs['deleted']
+				else:
+					listArgs['deleted'] = prevResponceValue
+
+			if nextArg == 'title':
+				if prevResponceValue is False:
+					del listArgs['title']
+				else:
+					listArgs['title'] = prevResponceValue
+
+			if nextArg == 'requester':
+				if prevResponceValue is False:
+					del listArgs['requester']
+				else:
+					listArgs['requester'] = prevResponceValue
+
+			if nextArg == 'from':
+				if prevResponceValue is False:
+					del listArgs['from']
+				else:
+					listArgs['from'] = prevResponceValue
+		
+			if 'subtitles' in listArgs:
+				keyboard[0].append(InlineKeyboardButton("❌ Subtitles", callback_data="{'nextArg': 'subtitles', 'value': False}"))
+				filters += '\n(has) Subtitles'
+			else:
+				#added subs to button options
+				keyboard[0].append(InlineKeyboardButton("✅ Subtitles", callback_data="{'nextArg': 'subtitles', 'value': True}"))
+
+			if 'deleted' in listArgs:
+				keyboard[0].append(InlineKeyboardButton("❌ Deleted", callback_data="{'nextArg': 'deleted', 'value': False}"))
+				filters += '\n(is) Deleted'
+			else:
+				#added subs to button options
+				keyboard[0].append(InlineKeyboardButton("✅ Deleted", callback_data="{'nextArg': 'deleted', 'value': True}"))
+
+			if 'from' in listArgs:
+				keyboard[1].append(InlineKeyboardButton("❌ From", callback_data="{'nextArg': 'from', 'value': False}"))
+				if listArgs['from'] == 'waitingForInput':
+					filtersToAddLater += '\n(includes) From:' # so when the filters is exported it wont have duplicate lines
+					buttons = False
+				else:
+					filters += f'\n(includes) From: {listArgs["from"]}'
+			else:
+				keyboard[1].append(InlineKeyboardButton("✅ From", callback_data="{'nextArg': 'from', 'value': 'waitingForInput'}"))
+
+			if 'title' in listArgs:
+				keyboard[1].append(InlineKeyboardButton("❌ Title", callback_data="{'nextArg': 'title', 'value': False}"))
+				if listArgs['title'] == 'waitingForInput':
+					filtersToAddLater += '\n(includes) Title:' # so when the filters is exported it wont have duplicate lines
+					buttons = False
+				else:
+					filters += f'\n(includes) Title: {listArgs["title"]}'
+			else:
+				keyboard[1].append(InlineKeyboardButton("✅ Title", callback_data="{'nextArg': 'title', 'value': 'waitingForInput'}"))
+				
+			if 'requester' in listArgs:
+				keyboard[1].append(InlineKeyboardButton("❌ Requester", callback_data="{'nextArg': 'requester', 'value': False}"))
+				if listArgs['requester'] == 'waitingForInput':
+					filtersToAddLater += '\n(with) Requester:' # so when the filters is exported it wont have duplicate lines
+					buttons = False
+				else:
+					filters += f'\n(with) Requester: {listArgs["requester"]}'
+			else:
+				keyboard[1].append(InlineKeyboardButton("✅ Requester", callback_data="{'nextArg': 'requester', 'value': 'waitingForInput'}"))
+				
+
+		elif listDataInfo['table'] == 'account':
+			listDataInfo['tableAlias'] = 'Channel'
+
+			if nextArg == 'title':
+				if prevResponceValue is False:
+					del listArgs['title']
+				else:
+					listArgs['title'] = prevResponceValue
+
+			if 'title' in listArgs:
+				keyboard[1].append(InlineKeyboardButton("❌ Title", callback_data="{'nextArg': 'title', 'value': False}"))
+				if listArgs['title'] == 'waitingForInput':
+					filtersToAddLater += '\n(includes) Title:' # so when the filters is exported it wont have duplicate lines
+					buttons = False
+				else:
+					filters += f'\n(includes) Title: {listArgs["title"]}'
+			else:
+				keyboard[1].append(InlineKeyboardButton("✅ Title", callback_data="{'nextArg': 'title', 'value': 'waitingForInput'}"))
+
+		keyboard[2].append(InlineKeyboardButton("🔍 Search", callback_data="{'nextArg': 'search', 'value': True}"))
+		keyboard[2].append(InlineKeyboardButton("Cancel", callback_data="{'nextArg': 'cancel', 'value': True}"))
+
+		if buttons is False:
+			context.user_data["next_handler"] = "listTextHandler"
+			reply_markup = InlineKeyboardMarkup(keyboard)
+			listDataInfo['reply_markup'] = reply_markup
+			listDataInfo['filters'] = filters
+			keyboard = [[],[],[]]
+			keyboard[1].append(InlineKeyboardButton("Cancel", callback_data="{'nextArg': 'cancel', 'value': True}"))	
+			rowsFound = 'Input'
+		else:
+			rowsFound = listCount(listDataInfo['table'], listArgs)		
+
+		filters += filtersToAddLater
+
+		filtersMarkdownFree = functions.escapeMarkdownAll(filters)
+
+		reply_markup = InlineKeyboardMarkup(keyboard)
+
+		context.bot.edit_message_text(chat_id=listDataInfo['chat_id'], message_id=listDataInfo['message_id'], text=f"Find all in *{listDataInfo['tableAlias']}* where:\t\\({rowsFound}\\)\n{filtersMarkdownFree}", parse_mode='MarkdownV2', reply_markup=reply_markup)
+
+		listDataInfo['listArgs'] = listArgs
+		context.user_data['listDataInfo'] = listDataInfo
+
+def searchList(update, context, info, page_number):
+	pageInfo = context.user_data.get("pageInfo")
+	table = info['table']
+	latestContent = ''
+	keyboard = [[],[]]
+
+	page_size = 10
+
+	pageInfo['page_number'] = page_number
+	pageInfo['chat_id'] = info['chat_id']
+	pageInfo['message_id'] = info['message_id']
+
+	column_mapping = {'from': 'childfrom', 'requester': 'requestuser'}
+	conditions = []
+	if info['listArgs']:
+		for key, value in info['listArgs'].items():
+			if key in column_mapping:
+				key = column_mapping[key]
+			if isinstance(value, bool):
+				value = int(value)
+				conditions.append(f"{key}='{value}'")
+			else:
+				conditions.append(f"{key} LIKE '%{value}%' COLLATE utf8mb4_general_ci")
+
+	offset = (page_number - 1) * page_size
+	limit = page_size
+
+	if table == 'content':
+		if info['listArgs']: # If there are arguments
+			#dataRequest = functions.getData(table, f"WHERE {' AND '.join(conditions)} ORDER BY downloaddate DESC LIMIT {limit} OFFSET {offset}")
+			if 'deleted' in info['listArgs']:
+				sortBy = 'deleteddate'
+			else:
+				sortBy = 'downloaddate'
+
+			dataRequest = functions.getData(table, f"WHERE {' AND '.join(conditions)} ORDER BY {sortBy} ASC LIMIT {limit} OFFSET {offset}")
+		else:
+			#dataRequest = functions.getData(table, f'ORDER BY downloaddate DESC LIMIT {limit} OFFSET {offset}')
+			dataRequest = functions.getData(table, f'ORDER BY downloaddate ASC LIMIT {limit} OFFSET {offset}')
+	elif table == 'account':
+		if info['listArgs']: # If there are arguments
+			dataRequest = functions.getData(table, f"WHERE {' AND '.join(conditions)} ORDER BY title ASC LIMIT {limit} OFFSET {offset}")
+		else:
+			dataRequest = functions.getData(table, f'ORDER BY title ASC LIMIT {limit} OFFSET {offset}')
+
+
+	number = offset
+	if table == 'content':
+		for (title, id, childfrom, videopath, extention, subtitles, uploaddate, downloaddate, deleteddate, deleted, deletedtype, requestuser) in dataRequest:
+			number += 1
+			latestContent += f"\n{number}\\. *{functions.escapeMarkdownAll(childfrom)}* \\| `{id}` \\| {functions.escapeMarkdownAll(title)}\n"
+
+	elif table == 'account':
+		pass
+
+	if (number - offset) == page_size: #max entries reached
+		pageInfo['fullPage'] = True
+	else:
+		pageInfo['fullPage'] = False
+
+	if page_number != 1:
+		keyboard[0].append(InlineKeyboardButton("⬅️", callback_data="pageBack"))
+		if pageInfo['fullPage']: # It isnt the last page
+			keyboard[1].append(InlineKeyboardButton("🗑️", callback_data="delete"))
+		else: # It is the last page
+			keyboard[0].append(InlineKeyboardButton("🗑️", callback_data="delete"))
+
+	if pageInfo['fullPage']:
+		if page_number == 1:
+			keyboard[0].append(InlineKeyboardButton("🗑️", callback_data="delete"))			
+		keyboard[0].append(InlineKeyboardButton("➡️", callback_data="pageForward"))
+
+	reply_markup = InlineKeyboardMarkup(keyboard)
+
+	context.bot.edit_message_text(chat_id=info['chat_id'], message_id=info['message_id'], text=latestContent, parse_mode='MarkdownV2', reply_markup=reply_markup)
+
+	context.user_data['pageInfo'] = pageInfo
+
 def sendContent(update, context):
 	chat_id = update.message.chat_id
 
@@ -322,9 +625,8 @@ def sendActualContent(update, context, vidId):
 	with open(pathDictionary['description'], 'r') as file:
 		description = file.read()
 
-	link = functions.uploadFile(title, description, pathDictionary['video'])
-
 	# Video
+	link = functions.uploadFile(title, description, pathDictionary['video'])
 	context.bot.send_message(chat_id=chat_id, text=link)
 	context.bot.delete_message(chat_id=chat_id, message_id=animationMessage.message_id)
 	context.bot.delete_message(chat_id=chat_id, message_id=statusMessage.message_id)
@@ -448,6 +750,31 @@ def link(update, context):
 			
 			context.user_data["next_handler"] = ""
 			return
+	elif context.user_data.get("next_handler") == 'listTextHandler':
+		listDataInfo = context.user_data.get("listDataInfo")
+		listArgs = listDataInfo['listArgs']
+		filters = listDataInfo['filters']
+
+		for key in listArgs:
+			if listArgs[key] == 'waitingForInput':
+				listArgs[key] = message_text
+				keyName = key.capitalize()
+				break
+
+		rowsFound = listCount(listDataInfo['table'], listArgs)
+
+		filters += f'\n(includes) {keyName}: {listArgs[key]}'
+		filtersMarkdownFree = functions.escapeMarkdownAll(filters)
+		
+		context.bot.delete_message(chat_id=chat_id, message_id=userMessageId)
+		context.bot.edit_message_text(chat_id=listDataInfo['chat_id'], message_id=listDataInfo['message_id'], text=f"Find all in *{listDataInfo['tableAlias']}* where:\t\\({rowsFound}\\)\n{filtersMarkdownFree}", parse_mode='MarkdownV2', reply_markup=listDataInfo['reply_markup'])
+
+		listDataInfo['listArgs'] = listArgs
+		context.user_data['listDataInfo'] = listDataInfo
+		context.user_data["next_handler"] = "listButtonHandler"
+
+		return
+
 	# Handle other messages as usual
 	else:
 		
@@ -623,7 +950,7 @@ def delete(update, context):
 					context.bot.edit_message_text(chat_id=chat_id, message_id=message.message_id, text="Video deleted from backup. ✅")
 				else:
 					context.bot.send_message(chat_id=chat_id, text="Sent removal request to host ⏳")
-					functions.msgHost(f"User, {name} just requested to remove https://youtu.be/{ytLinkId}")
+					functions.msgHost(f"User, {name} just requested to remove https://youtu.be/{ytLinkId}", False)
 		else:
 			message = context.bot.send_message(chat_id=chat_id, text="Video was not downloaded. ✅")
 			responseMessageId = message.message_id
@@ -657,6 +984,7 @@ def main():
 	dp.add_handler(CommandHandler("latest", ask_latest))
 	dp.add_handler(CommandHandler("delete", delete))
 	dp.add_handler(CommandHandler("send", sendContent))
+	dp.add_handler(CommandHandler("list", listData))
 	dp.add_handler(CallbackQueryHandler(buttonResolver))
 	dp.add_handler(CommandHandler("info", get_info))
 	dp.add_handler(MessageHandler(Filters.text & (~Filters.command), link))
