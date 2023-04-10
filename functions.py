@@ -226,7 +226,7 @@ def escapeMarkdown(text):
 	return formatedQuote
 
 def escapeMarkdownAll(text):
-	escape_list = ['>', '-', ']', '[', '.', '}', '{', '|', ')', '(', '#', '!', '=', '+']
+	escape_list = ['>', '-', ']', '[', '.', '}', '{', '|', ')', '(', '#', '!', '=', '+', '*', '_', '`']
 	formatedQuote = ''.join(['\\'+c if c in escape_list else c for c in text])
 	return formatedQuote
 
