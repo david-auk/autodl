@@ -4,7 +4,7 @@ import secret
 import time
 from datetime import datetime, timedelta
 from telegram.ext import Updater, CommandHandler, CallbackQueryHandler, CallbackContext, MessageHandler, Filters
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ParseMode
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ParseMode, ChatAction
 
 # Enable logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',level=logging.INFO)
@@ -157,10 +157,23 @@ def listData(update, context):
 		context.bot.send_message(chat_id=update.message.chat_id, text="Sorry, you are not authorized to use this bot.")
 		return
 
-	keyboard = [[InlineKeyboardButton("Content 🍿", callback_data="{'nextArg': 'table', 'value': 'content'}"),InlineKeyboardButton("Channel 🗃️", callback_data="{'nextArg': 'table', 'value': 'account'}"),InlineKeyboardButton("Cancel", callback_data="{'nextArg': 'cancel', 'value': True}")]]
+
+	#accountCount = listCount('account', {})
+	#contentCount = listCount('content', {})
+	keyboard = [[InlineKeyboardButton("Content 🍿", callback_data="{'nextArg': 'table', 'value': 'content'}"),InlineKeyboardButton("Channel 🗃️", callback_data="{'nextArg': 'table', 'value': 'account'}")],[]]
+
+	for (name, id, priority, authenticated) in functions.getData('chatid', f'WHERE id=\"{chat_id}\"'):
+		if priority == '1':
+			#chatidCount = listCount('chatid', {})
+			keyboard[0].append(InlineKeyboardButton("ChatID 👀", callback_data="{'nextArg': 'table', 'value': 'chatid'}"))
+			keyboard[1].append(InlineKeyboardButton("Cancel", callback_data="{'nextArg': 'cancel', 'value': True}"))
+		else:
+			keyboard[0].append(InlineKeyboardButton("Cancel", callback_data="{'nextArg': 'cancel', 'value': True}"))
+
+
 	reply_markup = InlineKeyboardMarkup(keyboard)
 
-	message = context.bot.send_message(chat_id=chat_id, text=f'List type:', reply_markup=reply_markup)
+	message = context.bot.send_message(chat_id=chat_id, text=f'Which *Items* do you want to view?', parse_mode='MarkdownV2', reply_markup=reply_markup)
 	context.user_data["listDataInfo"] = {'message_id': message.message_id, 'chat_id': chat_id, 'userMessage_id': innitialUserMessageId, 'listArgs': {}}
 	context.user_data["next_handler"] = "listButtonHandler"
 
@@ -460,6 +473,27 @@ def buttonResolver(update, context):
 			else:
 				keyboard[1].append(InlineKeyboardButton("✅ Title", callback_data="{'nextArg': 'title', 'value': 'waitingForInput'}"))
 
+		elif listDataInfo['table'] == 'chatid':
+			listDataInfo['tableAlias'] = 'ChatID'
+
+			if nextArg == 'name':
+				if prevResponceValue is False:
+					del listArgs['name']
+				else:
+					listArgs['name'] = prevResponceValue
+
+			if 'name' in listArgs:
+				keyboard[1].append(InlineKeyboardButton("❌ Name", callback_data="{'nextArg': 'name', 'value': False}"))
+				if listArgs['name'] == 'waitingForInput':
+					filtersToAddLater += '\n(includes) Name:' # so when the filters is exported it wont have duplicate lines
+					buttons = False
+				else:
+					filters += f'\n(includes) Name: {listArgs["name"]}'
+			else:
+				keyboard[1].append(InlineKeyboardButton("✅ Name", callback_data="{'nextArg': 'name', 'value': 'waitingForInput'}"))
+
+
+
 		if buttons is False:
 			context.user_data["next_handler"] = "listTextHandler"
 			reply_markup = InlineKeyboardMarkup(keyboard)
@@ -535,6 +569,13 @@ def searchList(update, context, info, page_number):
 		else:
 			hasConditions = False
 			dataRequest = functions.getData(table, f'ORDER BY title ASC LIMIT {limit} OFFSET {offset}')
+	elif table == 'chatid':
+		if info['listArgs']: # If there are arguments
+			hasConditions = True
+			dataRequest = functions.getData(table, f"WHERE {' AND '.join(conditions)} ORDER BY name ASC LIMIT {limit} OFFSET {offset}")
+		else:
+			hasConditions = False
+			dataRequest = functions.getData(table, f'ORDER BY name ASC LIMIT {limit} OFFSET {offset}')
 
 
 	number = offset
@@ -558,11 +599,21 @@ def searchList(update, context, info, page_number):
 		if maxNumber == 1:
 			for (channelTitle, id, priority, pullError) in dataRequest:
 				number += 1
-				latestContent += f"\n*{functions.escapeMarkdownAll(channelTitle)}* \\| {priority}\nhttps://youtube\\.com/channel/{functions.escapeMarkdownAll(id)}\n"
+				latestContent += f"\n*{functions.escapeMarkdownAll(channelTitle)}* \\| {priority}\nyoutube\\.com/channel/{functions.escapeMarkdownAll(id)}\n"
 		else:
 			for (channelTitle, id, priority, pullError) in dataRequest:
 				number += 1
-				latestContent += f"\n{number}\\. *{functions.escapeMarkdownAll(channelTitle)}* \\| {priority}\nhttps://youtube\\.com/channel/{functions.escapeMarkdownAll(id)}\n"
+				latestContent += f"\n{number}\\. *{functions.escapeMarkdownAll(channelTitle)}* \\| {priority}\nyoutube\\.com/channel/{functions.escapeMarkdownAll(id)}\n"
+
+	elif table == 'chatid':
+		if maxNumber == 1:
+			for (name, id, priority, authenticated) in dataRequest:
+				number += 1
+				latestContent += f"\n*{functions.escapeMarkdownAll(name)}* \\| `{id}` \\| Priority: {priority}\n"
+		else:
+			for (name, id, priority, authenticated) in dataRequest:
+				number += 1
+				latestContent += f"\n{number}\\. *{functions.escapeMarkdownAll(name)}* \\| `{id}` \\| Priority: {priority}\n"
 
 	elif table == 'account':
 		pass
@@ -671,7 +722,10 @@ def sendActualContent(update, context, vidId):
 		description = file.read()
 
 	# Video
+	#context.bot.send_chat_action(chat_id=update.message.chat_id, action=ChatAction.UPLOAD_VIDEO, timeout=100)
 	link = functions.uploadFile(title, description, pathDictionary['video'])
+	#context.bot.send_chat_action(chat_id=update.message.chat_id, action=ChatAction.UPLOAD_VIDEO, timeout=0.5)
+	
 	context.bot.send_message(chat_id=chat_id, text=link)
 	context.bot.delete_message(chat_id=chat_id, message_id=animationMessage.message_id)
 	context.bot.delete_message(chat_id=chat_id, message_id=statusMessage.message_id)
