@@ -16,7 +16,7 @@ password = secret.telegram['credentials']['userpass']
 # Define handlers for each command
 def start(update, context):
 	"""Send a message when the command /start is issued."""
-	update.message.reply_text('Welcome to the *Telegram Command Interface*\n\nUse: /help', parse_mode='MarkdownV2')
+	update.message.reply_text('Welcome to the *Telegram Command Interface*\n\nAuthenticate: /passwd\nUse: /help', parse_mode='MarkdownV2')
 	user = update.message.from_user
 	chat_id = update.message.from_user.id
 	name = f"@{user.username}"
