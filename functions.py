@@ -178,12 +178,13 @@ def delVid(vidId):
 	# Getting facts
 	rootDownloadDir = secret.configuration['general']['backupDir']
 	for (title, id, childfrom, videopath, extention, subtitles, uploaddate, downloaddate, deleteddate, deleted, deletedtype, writtenrequestuser) in getData('content', f'WHERE id=\"{vidId}\"'):
-		accountPath = f'{rootDownloadDir}/{childfrom}'
-		pathDictionary = {
-			'video': f'{rootDownloadDir}/{childfrom}/{videopath}.{extention}',
-			'thumbnail': f'{rootDownloadDir}/{childfrom}/thumbnail/{videopath}.jpg',
-			'description': f'{rootDownloadDir}/{childfrom}/description/{videopath}.txt'
-		}
+		for (channelTitle, channelId, priority, pullError) in functions.getData('account', f'WHERE id=\"{childfrom}\"'):
+			accountPath = f'{rootDownloadDir}/{channelTitle}'
+			pathDictionary = {
+				'video': f'{rootDownloadDir}/{channelTitle}/{videopath}.{extention}',
+				'thumbnail': f'{rootDownloadDir}/{channelTitle}/thumbnail/{videopath}.jpg',
+				'description': f'{rootDownloadDir}/{channelTitle}/description/{videopath}.txt'
+			}
 
 	# Removing files
 	for value in pathDictionary:
@@ -197,7 +198,7 @@ def delVid(vidId):
 
 	# Deleting directory (if empty)
 	if not dirContent:
-		shutil.rmtree(f'{rootDownloadDir}/{childfrom}')
+		shutil.rmtree(f'{rootDownloadDir}/{channelTitle}')
 
 	# Deleting entry from DB
 	delData('content', vidId)
