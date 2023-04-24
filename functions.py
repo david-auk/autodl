@@ -11,6 +11,7 @@ import os
 import re
 
 from telegram import Bot, ParseMode
+#from moviepy.video.io.VideoFileClip import VideoFileClip
 from yt_dlp import YoutubeDL, utils
 from mysql.connector import conversion
 
@@ -439,6 +440,56 @@ def humanReadableSize(path):
 	human_readable_size = f"{file_size:.2f} {size_suffixes[size_suffix_index]}"
 
 	return human_readable_size
+
+#pip3 install moviepy==1.0.3
+#def get_video_duration(file_path):
+#    # Open video file
+#    video = VideoFileClip(file_path)
+#
+#    # Get duration in seconds
+#    duration = video.duration
+#
+#    # Close video file
+#    video.reader.close()
+#
+#    # Convert to minutes and seconds
+#    if duration >= 60:
+#        minutes = int(duration // 60)
+#        seconds = int(duration % 60)
+#        return f"{minutes}:{seconds:02}"
+#    else:
+#        return f"{duration:.2f}"
+
+#from PIL import Image
+#def get_resolution(file_path):
+#    # Open file
+#    with Image.open(file_path) as image:
+#        # Get resolution
+#        width, height = image.size
+#
+#    # Determine quality based on width
+#    if width >= 3840:
+#        quality = "4K"
+#    elif width >= 1920:
+#        quality = "1080p"
+#    elif width >= 1280:
+#        quality = "720p"
+#    else:
+#        quality = f"{width}x{height}"
+#
+#    # Return resolution with quality information
+#    return f"{width}x{height} ({quality})"
+
+
+def days_since(date_str):
+    # Convert date string to datetime object
+    date = datetime.datetime.strptime(date_str, '%Y-%m-%d').date()
+
+    # Calculate difference between current date and input date
+    delta = datetime.datetime.now().date() - date
+
+    # Return number of days as integer
+    return delta.days
 
 def getChannelFacts(link):
 	link = f"https://youtube.com/channel/{link}"

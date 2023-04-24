@@ -183,10 +183,13 @@ def listCount(table, info):
 			return
 
 	column_mapping = {'from': 'childfrom', 'requester': 'requestuser'}
+	exclude_columns = [ 'fromName' ]
 
 	conditions = []
 	if info:
 		for key, value in info.items():
+			if key in exclude_columns:
+				continue
 			if key in column_mapping:
 				key = column_mapping[key]
 			if isinstance(value, bool):
@@ -407,6 +410,7 @@ def buttonResolver(update, context):
 			if nextArg == 'from':
 				if prevResponceValue is False:
 					del listArgs['from']
+					del listArgs['fromName']
 				else:
 					listArgs['from'] = prevResponceValue
 		
@@ -427,10 +431,10 @@ def buttonResolver(update, context):
 			if 'from' in listArgs:
 				keyboard[1].append(InlineKeyboardButton("❌ From", callback_data="{'nextArg': 'from', 'value': False}"))
 				if listArgs['from'] == 'waitingForInput':
-					filtersToAddLater += '\n(includes) From:' # so when the filters is exported it wont have duplicate lines
+					filtersToAddLater += '\n(is) From:' # so when the filters is exported it wont have duplicate lines
 					buttons = False
 				else:
-					filters += f'\n(includes) From: {listArgs["from"]}'
+					filters += f'\n(is) From: {listArgs["fromName"]}'
 			else:
 				keyboard[1].append(InlineKeyboardButton("✅ From", callback_data="{'nextArg': 'from', 'value': 'waitingForInput'}"))
 
@@ -534,9 +538,12 @@ def searchList(update, context, info, page_number):
 	pageInfo['message_id'] = info['message_id']
 
 	column_mapping = {'from': 'childfrom', 'requester': 'requestuser'}
+	exclude_columns = [ 'fromName' ]
 	conditions = []
 	if info['listArgs']:
 		for key, value in info['listArgs'].items():
+			if key in exclude_columns:
+				continue
 			if key in column_mapping:
 				key = column_mapping[key]
 			if isinstance(value, bool):
@@ -735,7 +742,7 @@ def sendActualContent(update, context, vidId):
 	# Audio
 	statusMessage = context.bot.send_message(chat_id=chat_id, text="Generating Audio from Video 2/4")
 	animationMessage = context.bot.send_message(chat_id=chat_id, text="⏳")
-	functions.subprocess.call(['ffmpeg', '-y', '-i', pathDictionary['video'], '-vn', '-acodec', 'libmp3lame', '-qscale:a', '2', '-metadata', f'artist={childfrom}', '-metadata', f'title={title}','-loglevel', 'quiet', pathDictionary['audio']])
+	functions.subprocess.call(['ffmpeg', '-y', '-i', pathDictionary['video'], '-vn', '-acodec', 'libmp3lame', '-qscale:a', '2', '-metadata', f'artist={channelTitle}', '-metadata', f'title={title}','-loglevel', 'quiet', pathDictionary['audio']])
 	context.bot.send_audio(chat_id=chat_id, audio=open(pathDictionary['audio'], 'rb'), caption='')
 	context.bot.delete_message(chat_id=chat_id, message_id=animationMessage.message_id)
 	functions.os.remove(pathDictionary['audio'])
@@ -780,13 +787,43 @@ def get_info(update, context):
 		return
 
 	infoContent = ''
+	keyboard = [[],[]]
 
 	if infoTable == 'content':
 
+		rootDownloadDir = secret.configuration['general']['backupDir']
+
 		for (title, vidId, childfrom, videopath, extention, subtitles, uploaddate, downloaddate, deleteddate, deleted, deletedtype, requestuser) in functions.getData('content', f'WHERE id=\"{userProvidedId}\"'):
-			infoContent += title + '\n\n'
+			infoContent += f'Title:  *{functions.escapeMarkdownAll(title)}*\n'
+			
+			# Channel info
+			for (channelTitle, channelId, priority, pullError) in functions.getData('account', f'WHERE id=\"{childfrom}\"'):
+				infoContent += f'From: *{channelTitle}* \\(`{channelId}`\\)\n\n'
+				accountPath = f'{rootDownloadDir}/{channelTitle}'
+				pathDictionary = {
+					'video': f'{rootDownloadDir}/{channelTitle}/{videopath}.{extention}',
+					'thumbnail': f'{rootDownloadDir}/{channelTitle}/thumbnail/{videopath}.jpg'
+				}
 
+			infoContent += f"Availability: *{deletedtype}*\n"
 
+			infoContent += f"Size: *{functions.escapeMarkdownAll(functions.humanReadableSize(pathDictionary['video']))}*\n\n"
+
+			uploadDateDay, uploadDateMonth, uploadDateYear, uploadDateHour, uploadDateMinute = functions.getDate(str(uploaddate))
+			uploadDaysAgo = functions.days_since(f"{uploadDateYear}-{uploadDateMonth}-{uploadDateDay}")
+			if uploadDaysAgo == 0:
+				pass
+			else:
+				uploadTimePerspective = f'{uploadDaysAgo} Days ago'
+			infoContent += f"Uploaded:      _{uploadDateDay}\\-{uploadDateMonth}\\-{uploadDateYear}_ *{uploadTimePerspective}*\n"
+
+			downloadDateDay, downloadDateMonth, downloadDateYear, downloadDateHour, downloadDateMinute = functions.getDate(str(downloaddate))
+			downloadDaysAgo = functions.days_since(f"{downloadDateYear}-{downloadDateMonth}-{downloadDateDay}")
+			if downloadDaysAgo == 0:
+				pass
+			else:
+				downloadTimePerspective = f'{downloadDaysAgo} Days ago'
+			infoContent += f"Downloaded: _{downloadDateDay}\\-{downloadDateMonth}\\-{downloadDateYear}_ *{downloadTimePerspective}*\n"
 
 	elif infoTable == 'account':
 
@@ -795,24 +832,34 @@ def get_info(update, context):
 			infoContent += f"Title: *{functions.escapeMarkdownAll(channelTitle)}*\n\n"
 
 			if pullError == 'N/A':
-				infoContent += "No content errors detected\\!\n\n"
+				infoContent += "No content errors detected\n\n"
 			else:
 				infoContent += f"ERROR: {functions.escapeMarkdownAll(pullError)}\n\n"
 
 			if priority == 1:
 				infoContent += f"Priority: _VeryFast_\n"
-				infoContent += f"Gets checkt every *5* minutes for new content\n\n"
+				infoContent += f"Gets checked every *5* minutes for new content\n\n"
 			elif priority == 2:
 				infoContent += f"Priority: _Fast_\n"
-				infoContent += f"Gets checkt every *10* minutes for new content\n\n"
+				infoContent += f"Gets checked every *10* minutes for new content\n\n"
 			elif priority == 3:
 				infoContent += f"Priority: _Medium_\n"
-				infoContent += f"Gets checkt every *15* minutes for new content\n\n"
+				infoContent += f"Gets checked every *15* minutes for new content\n\n"
+			elif priority == 4:
+				infoContent += f"Priority: *NONE*\n"
+				infoContent += f"This Channel is not backed up, it has only been used to download sigle videos\\.\n\n"
 
 			#infoContent += f"Channel ID: *{functions.escapeMarkdownAll(id)}*\n"
-			infoContent += f"https:\\/\\/youtube\\.com\\/channel\\/{functions.escapeMarkdownAll(id)}\n\n"
+			infoContent += f"https:\\/\\/youtube\\.com\\/channel\\/{functions.escapeMarkdownAll(channelId)}\n\n"
 
-			# keyboard = [[ 'BUTTONSTUFF' ]]
+			keyboard[0].append(InlineKeyboardButton(text='Open Channel', url=f'https://youtube.com/channel/{channelId}'))
+			keyboard[1].append(InlineKeyboardButton(text='Remove Channel', callback_data='delete'))
+			keyboard[1].append(InlineKeyboardButton(text='List Channel', callback_data='list'))
+
+
+			#keyboard = [[InlineKeyboardButton(text='Open Channel', url=f'https://youtube.com/channel/{channelId}')]]
+			#keyboard = [[InlineKeyboardButton("🗑️", callback_data='delete')]]
+
 
 	elif infoTable == 'chatid':
 
@@ -824,8 +871,11 @@ def get_info(update, context):
 		for (name, chatId, priority, authenticated) in functions.getData('chatid', f'WHERE id=\"{userProvidedId}\"'):
 			print(name)
 
-
-	infoResultMessage = context.bot.send_message(chat_id=chat_id, text=infoContent, parse_mode='MarkdownV2', disable_web_page_preview=False) # , reply_markup=reply_markup
+	if bool(keyboard[0]) or bool(keyboard[1]):
+		reply_markup = InlineKeyboardMarkup(keyboard)
+		infoResultMessage = context.bot.send_message(chat_id=chat_id, text=infoContent, parse_mode='MarkdownV2', reply_markup=reply_markup) #disable_web_page_preview=False)
+	else:
+		infoResultMessage = context.bot.send_message(chat_id=chat_id, text=infoContent, parse_mode='MarkdownV2') #disable_web_page_preview=False)
 
 def link(update, context):
 	"""Handle links sent by the user."""
@@ -913,11 +963,29 @@ def link(update, context):
 		listArgs = listDataInfo['listArgs']
 		filters = listDataInfo['filters']
 
+#		prevResponceDict = eval(query.data)
+#		prevResponceValue = prevResponceDict['value']
+#		nextArg = prevResponceDict['nextArg']
+
 		for key in listArgs:
 			if listArgs[key] == 'waitingForInput':
 				listArgs[key] = message_text
 				keyName = key.capitalize()
 				break
+
+		if 'from' in listArgs and not 'fromName' in listArgs:
+			channelFound = False
+			for (channelTitle, channelId, priority, pullError) in functions.getData('account', f"WHERE title LIKE '%{listArgs['from']}%' COLLATE utf8mb4_general_ci"):
+				listArgs['from'] = channelId
+				listArgs['fromName'] = channelTitle
+				key = 'fromName' # so it showes correctly in filters += f'\n(includes) {keyName}: {listArgs[key]}'
+				channelFound = True
+				break
+				
+			if channelFound is False:
+				listArgs['from'] = '/'
+				listArgs['fromName'] = 'Channel Not Found..'
+				key = 'fromName' # so it showes correctly in filters += f'\n(includes) {keyName}: {listArgs[key]}'
 
 		rowsFound = listCount(listDataInfo['table'], listArgs)
 
@@ -929,7 +997,11 @@ def link(update, context):
 
 		reply_markup = InlineKeyboardMarkup(keyboard)
 
-		filters += f'\n(includes) {keyName}: {listArgs[key]}'
+		if keyName == 'From':
+			filters += f'\n(is) {keyName}: {listArgs[key]}'
+		else:
+			filters += f'\n(includes) {keyName}: {listArgs[key]}'
+
 		filtersMarkdownFree = functions.escapeMarkdownAll(filters)
 		
 		context.bot.delete_message(chat_id=chat_id, message_id=userMessageId)
@@ -1050,7 +1122,7 @@ def link(update, context):
 							context.bot.edit_message_text(chat_id=chat_id, message_id=message.message_id, text=f"ERROR 404, Cant find channel: \'{ytLinkIdClean}\' ❌")
 							return
 
-					for (channelTitle, chatId, priority, pullError) in functions.getData('account', f'WHERE id=\"{convertedChannelId}\"'):
+					for (channelTitle, channelId, priority, pullError) in functions.getData('account', f'WHERE id=\"{convertedChannelId}\"'):
 						if message:
 							context.bot.edit_message_text(chat_id=chat_id, message_id=message.message_id, text=f"Already backing up channel: \'{channelTitle}\' ✅")
 						else:
