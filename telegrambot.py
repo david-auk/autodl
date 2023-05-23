@@ -4,7 +4,7 @@ import secret
 import time
 from datetime import datetime, timedelta
 from telegram.ext import Updater, CommandHandler, CallbackQueryHandler, CallbackContext, MessageHandler, Filters
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ParseMode
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ParseMode, ChatAction
 
 # Enable logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',level=logging.INFO)
@@ -16,7 +16,7 @@ password = secret.telegram['credentials']['userpass']
 # Define handlers for each command
 def start(update, context):
 	"""Send a message when the command /start is issued."""
-	update.message.reply_text('Welcome to the *Telegram Command Interface*\n\nUse: /help', parse_mode='MarkdownV2')
+	update.message.reply_text('Welcome to the *Telegram Command Interface*\n\nAuthenticate: /passwd\nUse: /help', parse_mode='MarkdownV2')
 	user = update.message.from_user
 	chat_id = update.message.from_user.id
 	name = f"@{user.username}"
@@ -49,7 +49,7 @@ def is_allowed_user(update, context):
 
 	# Check if the user ID is in the AllowedUserID variable
 	userIsAllowed = False
-	for (name, id, priority, authenticated) in functions.getData('chatid', f'WHERE id=\"{chat_id}\"'):
+	for (name, chatId, priority, authenticated) in functions.getData('chatid', f'WHERE id=\"{chat_id}\"'):
 		if authenticated == '1':
 			userIsAllowed = True
 
@@ -101,7 +101,7 @@ def ask_latest(update, context):
 
 				if totalRows:
 					totalRows += 1
-					for (title, id, childfrom, videopath, extention, subtitles, uploaddate, downloaddate, deleteddate, deleted, deletedtype, requestuser) in functions.getData(table, statment):
+					for (title, vidId, childfrom, videopath, extention, subtitles, uploaddate, downloaddate, deleteddate, deleted, deletedtype, requestuser) in functions.getData(table, statment):
 						formattedDate = functions.getDate(str(downloaddate))
 						totalRows -= 1
 						space = " " * (maxLen - len(str(totalRows)))
@@ -149,12 +149,74 @@ def ask_latest(update, context):
 	context.user_data["latestRequestInfo"] = {'message_id': f'{message.message_id}', 'chat_id': f'{chat_id}', 'userMessage_id': f'{userMessageId}'}
 	context.user_data["next_handler"] = "latest"
 
+def listData(update, context):
+	innitialUserMessageId = update.message.message_id
+	chat_id = update.message.chat_id
+
+	if is_allowed_user(update, context) is False:
+		context.bot.send_message(chat_id=update.message.chat_id, text="Sorry, you are not authorized to use this bot.")
+		return
+
+
+	#accountCount = listCount('account', {})
+	#contentCount = listCount('content', {})
+	keyboard = [[InlineKeyboardButton("Content 🍿", callback_data="{'nextArg': 'table', 'value': 'content'}"),InlineKeyboardButton("Channel 🗃️", callback_data="{'nextArg': 'table', 'value': 'account'}")],[]]
+
+	for (name, chatId, priority, authenticated) in functions.getData('chatid', f'WHERE id=\"{chat_id}\"'):
+		if priority == '1':
+			#chatidCount = listCount('chatid', {})
+			keyboard[0].append(InlineKeyboardButton("ChatID 👀", callback_data="{'nextArg': 'table', 'value': 'chatid'}"))
+			keyboard[1].append(InlineKeyboardButton("Cancel", callback_data="{'nextArg': 'cancel', 'value': True}"))
+		else:
+			keyboard[0].append(InlineKeyboardButton("Cancel", callback_data="{'nextArg': 'cancel', 'value': True}"))
+
+
+	reply_markup = InlineKeyboardMarkup(keyboard)
+
+	message = context.bot.send_message(chat_id=chat_id, text=f'Which *Items* do you want to view?', parse_mode='MarkdownV2', reply_markup=reply_markup)
+	context.user_data["listDataInfo"] = {'message_id': message.message_id, 'chat_id': chat_id, 'userMessage_id': innitialUserMessageId, 'listArgs': {}}
+	context.user_data["next_handler"] = "listButtonHandler"
+
+def listCount(table, info):
+	for key in info:
+		if info[key] == 'waitingForInput':
+			return
+
+	column_mapping = {'from': 'childfrom', 'requester': 'requestuser'}
+	exclude_columns = [ 'fromName', 'requesterName' ]
+	completed_columns = [ 'childfrom', 'requestuser' ]
+
+	conditions = []
+	if info:
+		for key, value in info.items():
+			if key in exclude_columns:
+				continue
+			if key in column_mapping:
+				key = column_mapping[key]
+			if isinstance(value, bool):
+				value = int(value)
+				conditions.append(f"{key}='{value}'")
+			elif key in completed_columns:
+				conditions.append(f"{key}='{value}'")
+			else:
+				#words = value.split()
+				#word_conditions = [f"{key} LIKE '%{word}%' COLLATE utf8mb4_general_ci" for word in words]
+				#condition = " AND ".join(word_conditions)
+				#conditions.append(f"({condition})")
+				conditions.append(f"{key} LIKE '%{value}%' COLLATE utf8mb4_general_ci")
+		totalRows = functions.countData(table, f"WHERE {' AND '.join(conditions)}")
+	else:
+		totalRows = functions.countData(table, 'ALL')
+
+	return totalRows
+
 def buttonResolver(update, context):
 	"""Handle the button press."""
 	#chat_id = update.message.chat_id
 	query = update.callback_query
 	query.answer()
 	buttonHandler = context.user_data["next_handler"]
+
 	#context.user_data["next_handler"] = ''
 
 	if buttonHandler == 'latest':
@@ -211,14 +273,15 @@ def buttonResolver(update, context):
 
 		if totalRows:
 			totalRows += 1
-			for (title, id, childfrom, videopath, extention, subtitles, uploaddate, downloaddate, deleteddate, deleted, deletedtype, requestuser) in functions.getData(table, statment):
-				totalRows -= 1
-				space = " " * (maxLen - len(str(totalRows)))
-				formattedDate = functions.getDate(str(downloaddate))
-				if dateSpecified:
-					latestContent += f"{totalRows}.{space} {childfrom} | {title} ({formattedDate[3]}:{formattedDate[4]})\n"
-				elif dateSpecified is False:
-					latestContent += f"{totalRows}.{space} {childfrom} | {title} ({formattedDate[1]}/{formattedDate[0]}, {formattedDate[3]}:{formattedDate[4]})\n"
+			for (title, vidId, childfrom, videopath, extention, subtitles, uploaddate, downloaddate, deleteddate, deleted, deletedtype, requestuser) in functions.getData(table, statment):
+				for (channelTitle, channelId, priority, pullError) in functions.getData('account', f'WHERE id=\"{childfrom}\"'):
+					totalRows -= 1
+					space = " " * (maxLen - len(str(totalRows)))
+					formattedDate = functions.getDate(str(downloaddate))
+					if dateSpecified:
+						latestContent += f"{totalRows}.{space} {channelTitle} | {title} ({formattedDate[3]}:{formattedDate[4]})\n"
+					elif dateSpecified is False:
+						latestContent += f"{totalRows}.{space} {channelTitle} | {title} ({formattedDate[1]}/{formattedDate[0]}, {formattedDate[3]}:{formattedDate[4]})\n"
 		else:
 			latestContent='No Data.'
 
@@ -252,6 +315,360 @@ def buttonResolver(update, context):
 		context.user_data["next_handler"] = 'channel_name'
 		context.user_data["channelChatInfo"] = channelChatInfo
 
+	elif buttonHandler == 'page':
+		pageInfo = context.user_data.get("pageInfo")
+		page_number = pageInfo['page_number']
+		responce = query.data
+		if responce == 'pageForward':
+			page_number += 1
+
+		elif responce == 'pageBack':
+			page_number -= 1
+
+		elif responce == 'delete':
+			context.user_data["next_handler"] = 'listButtonHandler'
+			query.data = '{\'nextArg\': \'placeholder\', \'value\': True}'
+			buttonResolver(update, context)
+			return
+
+		searchList(update, context, pageInfo['listDataInfo'], page_number)		
+
+	elif buttonHandler == 'listTextHandler': # The handler already changed but the user chose a button
+		listDataInfo = context.user_data.get("listDataInfo")
+		listArgs = listDataInfo['listArgs']
+
+		prevResponceDict = eval(query.data)
+
+		if prevResponceDict['nextArg'] == 'cancel':
+			context.bot.edit_message_text(chat_id=listDataInfo['chat_id'], message_id=listDataInfo['message_id'], text="Canceled request.")
+			time.sleep(1.5)
+			context.bot.delete_message(chat_id=listDataInfo['chat_id'], message_id=listDataInfo['message_id'])
+			context.bot.delete_message(chat_id=listDataInfo['chat_id'], message_id=listDataInfo['userMessage_id'])
+			context.user_data["next_handler"] = ''
+			context.user_data['listDataInfo'] = ''
+			return
+
+	elif buttonHandler == 'listButtonHandler':
+		listDataInfo = context.user_data.get("listDataInfo")
+		listArgs = listDataInfo['listArgs']
+
+		buttons = True
+
+		prevResponceDict = eval(query.data)
+		prevResponceValue = prevResponceDict['value']
+		nextArg = prevResponceDict['nextArg']
+
+		filters = ''
+		filtersToAddLater = ''
+
+		keyboard = [[],[],[]]
+
+		if nextArg == 'cancel':
+			context.bot.edit_message_text(chat_id=listDataInfo['chat_id'], message_id=listDataInfo['message_id'], text="Canceled request.")
+			time.sleep(1.5)
+			context.bot.delete_message(chat_id=listDataInfo['chat_id'], message_id=listDataInfo['message_id'])
+			context.bot.delete_message(chat_id=listDataInfo['chat_id'], message_id=listDataInfo['userMessage_id'])
+			context.user_data["next_handler"] = ''
+			context.user_data['listDataInfo'] = ''
+			return
+
+		if nextArg == 'search':
+			context.user_data["next_handler"] = 'page'
+			context.user_data['listDataInfo'] = ''
+			listDataInfo['maxNumber'] = listCount(listDataInfo['table'], listArgs)
+			context.user_data['pageInfo'] = {'listDataInfo': listDataInfo}
+			searchList(update, context, listDataInfo, 1)
+			return
+
+		if nextArg == 'table':
+			listDataInfo['table'] = prevResponceValue
+			nextArg = ''
+
+		if listDataInfo['table'] == 'content':
+			listDataInfo['tableAlias'] = 'Content'
+
+			if nextArg == 'subtitles':
+				if prevResponceValue is False:
+					del listArgs['subtitles']
+				else:
+					listArgs['subtitles'] = prevResponceValue
+
+			if nextArg == 'deleted':
+				if prevResponceValue is False:
+					del listArgs['deleted']
+				else:
+					listArgs['deleted'] = prevResponceValue
+
+			if nextArg == 'title':
+				if prevResponceValue is False:
+					del listArgs['title']
+				else:
+					listArgs['title'] = prevResponceValue
+
+			if nextArg == 'requester':
+				if prevResponceValue is False:
+					del listArgs['requester']
+					del listArgs['requesterName']
+				else:
+					listArgs['requester'] = prevResponceValue
+
+			if nextArg == 'from':
+				if prevResponceValue is False:
+					del listArgs['from']
+					del listArgs['fromName']
+				else:
+					listArgs['from'] = prevResponceValue
+		
+			if 'subtitles' in listArgs:
+				keyboard[0].append(InlineKeyboardButton("❌ Subtitles", callback_data="{'nextArg': 'subtitles', 'value': False}"))
+				filters += '\n(has) Subtitles'
+			else:
+				#added subs to button options
+				keyboard[0].append(InlineKeyboardButton("✅ Subtitles", callback_data="{'nextArg': 'subtitles', 'value': True}"))
+
+			if 'deleted' in listArgs:
+				keyboard[0].append(InlineKeyboardButton("❌ Deleted", callback_data="{'nextArg': 'deleted', 'value': False}"))
+				filters += '\n(is) Deleted'
+			else:
+				#added subs to button options
+				keyboard[0].append(InlineKeyboardButton("✅ Deleted", callback_data="{'nextArg': 'deleted', 'value': True}"))
+
+			if 'from' in listArgs:
+				keyboard[1].append(InlineKeyboardButton("❌ From", callback_data="{'nextArg': 'from', 'value': False}"))
+				if listArgs['from'] == 'waitingForInput':
+					filtersToAddLater += '\n(is) From:' # so when the filters is exported it wont have duplicate lines
+					buttons = False
+				else:
+					filters += f'\n(is) From: {listArgs["fromName"]}'
+			else:
+				keyboard[1].append(InlineKeyboardButton("✅ From", callback_data="{'nextArg': 'from', 'value': 'waitingForInput'}"))
+
+			if 'title' in listArgs:
+				keyboard[1].append(InlineKeyboardButton("❌ Title", callback_data="{'nextArg': 'title', 'value': False}"))
+				if listArgs['title'] == 'waitingForInput':
+					filtersToAddLater += '\n(includes) Title:' # so when the filters is exported it wont have duplicate lines
+					buttons = False
+				else:
+					filters += f'\n(includes) Title: {listArgs["title"]}'
+			else:
+				keyboard[1].append(InlineKeyboardButton("✅ Title", callback_data="{'nextArg': 'title', 'value': 'waitingForInput'}"))
+			
+			for (name, chatId, priority, authenticated) in functions.getData('chatid', f'WHERE id=\"{listDataInfo["chat_id"]}\"'):
+				if priority == '1':
+					if 'requester' in listArgs:
+						keyboard[1].append(InlineKeyboardButton("❌ Requester", callback_data="{'nextArg': 'requester', 'value': False}"))
+						if listArgs['requester'] == 'waitingForInput':
+							filtersToAddLater += '\n(with) Requester:' # so when the filters is exported it wont have duplicate lines
+							buttons = False
+						else:
+							filters += f'\n(with) Requester: {listArgs["requesterName"]}'
+					else:
+						keyboard[1].append(InlineKeyboardButton("✅ Requester", callback_data="{'nextArg': 'requester', 'value': 'waitingForInput'}"))
+				
+
+		elif listDataInfo['table'] == 'account':
+			listDataInfo['tableAlias'] = 'Channel'
+
+			if nextArg == 'title':
+				if prevResponceValue is False:
+					del listArgs['title']
+				else:
+					listArgs['title'] = prevResponceValue
+
+			if 'title' in listArgs:
+				keyboard[1].append(InlineKeyboardButton("❌ Title", callback_data="{'nextArg': 'title', 'value': False}"))
+				if listArgs['title'] == 'waitingForInput':
+					filtersToAddLater += '\n(includes) Title:' # so when the filters is exported it wont have duplicate lines
+					buttons = False
+				else:
+					filters += f'\n(includes) Title: {listArgs["title"]}'
+			else:
+				keyboard[1].append(InlineKeyboardButton("✅ Title", callback_data="{'nextArg': 'title', 'value': 'waitingForInput'}"))
+
+		elif listDataInfo['table'] == 'chatid':
+			listDataInfo['tableAlias'] = 'ChatID'
+
+			if nextArg == 'name':
+				if prevResponceValue is False:
+					del listArgs['name']
+				else:
+					listArgs['name'] = prevResponceValue
+
+			if 'name' in listArgs:
+				keyboard[1].append(InlineKeyboardButton("❌ Name", callback_data="{'nextArg': 'name', 'value': False}"))
+				if listArgs['name'] == 'waitingForInput':
+					filtersToAddLater += '\n(includes) Name:' # so when the filters is exported it wont have duplicate lines
+					buttons = False
+				else:
+					filters += f'\n(includes) Name: {listArgs["name"]}'
+			else:
+				keyboard[1].append(InlineKeyboardButton("✅ Name", callback_data="{'nextArg': 'name', 'value': 'waitingForInput'}"))
+
+
+
+		if buttons is False:
+			context.user_data["next_handler"] = "listTextHandler"
+			reply_markup = InlineKeyboardMarkup(keyboard)
+			listDataInfo['keyboard'] = keyboard
+			listDataInfo['filters'] = filters
+			keyboard = [[],[],[]]
+			keyboard[1].append(InlineKeyboardButton("Cancel", callback_data="{'nextArg': 'cancel', 'value': True}"))	
+			rowsFound = 'Input'
+		else:
+			rowsFound = listCount(listDataInfo['table'], listArgs)
+			if rowsFound != 0:
+				keyboard[2].append(InlineKeyboardButton("🔍 Search", callback_data="{'nextArg': 'search', 'value': True}"))
+			keyboard[2].append(InlineKeyboardButton("Cancel", callback_data="{'nextArg': 'cancel', 'value': True}"))
+
+		filters += filtersToAddLater
+
+		filtersMarkdownFree = functions.escapeMarkdownAll(filters)
+
+		reply_markup = InlineKeyboardMarkup(keyboard)
+
+		context.bot.edit_message_text(chat_id=listDataInfo['chat_id'], message_id=listDataInfo['message_id'], text=f"Find all in *{listDataInfo['tableAlias']}* where:\t\\({rowsFound}\\)\n{filtersMarkdownFree}", parse_mode='MarkdownV2', reply_markup=reply_markup)
+
+		listDataInfo['listArgs'] = listArgs
+		context.user_data['listDataInfo'] = listDataInfo
+
+def searchList(update, context, info, page_number):
+	pageInfo = context.user_data.get("pageInfo")
+	table = info['table']
+	maxNumber = info['maxNumber']
+	latestContent = ''
+	keyboard = [[],[]]
+
+	page_size = 5
+	
+	pageInfo['page_number'] = page_number
+	pageInfo['chat_id'] = info['chat_id']
+	pageInfo['message_id'] = info['message_id']
+
+	column_mapping = {'from': 'childfrom', 'requester': 'requestuser'}
+	exclude_columns = [ 'fromName', 'requesterName' ]
+	completed_columns = [ 'childfrom', 'requestuser' ]
+	conditions = []
+	if info['listArgs']:
+		for key, value in info['listArgs'].items():
+			if key in exclude_columns:
+				continue
+			if key in column_mapping:
+				key = column_mapping[key]
+			if isinstance(value, bool):
+				value = int(value)
+				conditions.append(f"{key}='{value}'")
+			elif key in completed_columns:
+				conditions.append(f"{key}='{value}'")
+			else:
+				#words = value.split()
+				#word_conditions = [f"{key} LIKE '%{word} %' COLLATE utf8mb4_general_ci" for word in words]
+				#condition = " AND ".join(word_conditions)
+				#conditions.append(f"({condition})")
+				conditions.append(f"{key} LIKE '%{value}%' COLLATE utf8mb4_general_ci")
+
+	offset = (page_number - 1) * page_size
+	limit = page_size
+
+	if table == 'content':
+		if info['listArgs']: # If there are arguments
+			if 'deleted' in info['listArgs']:
+				sortBy = 'deleteddate'
+			else:
+				sortBy = 'downloaddate'
+			hasConditions = True
+			dataRequest = functions.getData(table, f"WHERE {' AND '.join(conditions)} ORDER BY {sortBy} DESC LIMIT {limit} OFFSET {offset}")
+		else:
+			hasConditions = False
+			dataRequest = functions.getData(table, f'ORDER BY downloaddate DESC LIMIT {limit} OFFSET {offset}')
+	elif table == 'account':
+		if info['listArgs']: # If there are arguments
+			hasConditions = True
+			dataRequest = functions.getData(table, f"WHERE {' AND '.join(conditions)} ORDER BY title ASC LIMIT {limit} OFFSET {offset}")
+		else:
+			hasConditions = False
+			dataRequest = functions.getData(table, f'ORDER BY title ASC LIMIT {limit} OFFSET {offset}')
+	elif table == 'chatid':
+		if info['listArgs']: # If there are arguments
+			hasConditions = True
+			dataRequest = functions.getData(table, f"WHERE {' AND '.join(conditions)} ORDER BY name ASC LIMIT {limit} OFFSET {offset}")
+		else:
+			hasConditions = False
+			dataRequest = functions.getData(table, f'ORDER BY name ASC LIMIT {limit} OFFSET {offset}')
+
+
+	number = offset
+	if table == 'content':
+		if maxNumber == 1:
+			for (title, vidId, childfrom, videopath, extention, subtitles, uploaddate, downloaddate, deleteddate, deleted, deletedtype, requestuser) in dataRequest:
+				for (channelTitle, channelId, priority, pullError) in functions.getData('account', f'WHERE id=\"{childfrom}\"'):
+					number += 1
+					latestContent += f"\n*{functions.escapeMarkdownAll(channelTitle)}* \\| `{vidId}` \\| {functions.escapeMarkdownAll(title)}\n"
+		else:
+			if hasConditions:
+				for (title, vidId, childfrom, videopath, extention, subtitles, uploaddate, downloaddate, deleteddate, deleted, deletedtype, requestuser) in dataRequest:
+					for (channelTitle, channelId, priority, pullError) in functions.getData('account', f'WHERE id=\"{childfrom}\"'):
+						number += 1
+						latestContent += f"\n{number}\\. *{functions.escapeMarkdownAll(channelTitle)}* \\| `{vidId}` \\| {functions.escapeMarkdownAll(title)}\n"
+			else: # The user wants to view all data
+				for (title, vidId, childfrom, videopath, extention, subtitles, uploaddate, downloaddate, deleteddate, deleted, deletedtype, requestuser) in dataRequest:
+					for (channelTitle, channelId, priority, pullError) in functions.getData('account', f'WHERE id=\"{childfrom}\"'):
+						number += 1
+						formattedDate = functions.getDate(str(downloaddate))
+						latestContent += f"\n{number}\\. *{functions.escapeMarkdownAll(channelTitle)}* \\| `{vidId}` \\| {functions.escapeMarkdownAll(title)} \\| {formattedDate[0]}, {formattedDate[3]}:{formattedDate[4]}\n"
+	elif table == 'account':
+		if maxNumber == 1:
+			for (channelTitle, channelId, priority, pullError) in dataRequest:
+				number += 1
+				latestContent += f"\n*{functions.escapeMarkdownAll(channelTitle)}* \\| `{functions.escapeMarkdownAll(channelId)}`\n"
+		else:
+			for (channelTitle, channelId, priority, pullError) in dataRequest:
+				number += 1
+				latestContent += f"\n{number}\\. *{functions.escapeMarkdownAll(channelTitle)}* \\| `{functions.escapeMarkdownAll(channelId)}`\n"
+
+	elif table == 'chatid':
+		if maxNumber == 1:
+			for (name, chatId, priority, authenticated) in dataRequest:
+				number += 1
+				latestContent += f"\n*{functions.escapeMarkdownAll(name)}* \\| `{chatId}` \\| Priority: {priority}\n"
+		else:
+			for (name, chatId, priority, authenticated) in dataRequest:
+				number += 1
+				latestContent += f"\n{number}\\. *{functions.escapeMarkdownAll(name)}* \\| `{chatId}` \\| Priority: {priority}\n"
+
+
+	if (number - offset) == page_size: #max entries reached
+		fullPage = True
+	else:
+		fullPage = False
+
+	if number == maxNumber:
+		finalPage = True
+	else:
+		finalPage = False
+
+	if page_number != 1:
+		keyboard[0].append(InlineKeyboardButton("⬅️", callback_data="pageBack"))
+		if fullPage and finalPage is False: # It isnt the last page
+			keyboard[1].append(InlineKeyboardButton("🗑️", callback_data="delete"))
+		else: # It is the last page
+			keyboard[0].append(InlineKeyboardButton("🗑️", callback_data="delete"))
+
+	if fullPage:
+		if page_number == 1:
+			keyboard[0].append(InlineKeyboardButton("🗑️", callback_data="delete"))
+		if finalPage is False:
+			keyboard[0].append(InlineKeyboardButton("➡️", callback_data="pageForward"))
+	else:
+		if page_number == 1:
+			keyboard[0].append(InlineKeyboardButton("🗑️", callback_data="delete"))
+
+	reply_markup = InlineKeyboardMarkup(keyboard)
+	context.bot.edit_message_text(chat_id=info['chat_id'], message_id=info['message_id'], text=latestContent, parse_mode='MarkdownV2', reply_markup=reply_markup)
+
+	context.user_data['listDataInfo'] = info
+
+	context.user_data['pageInfo'] = pageInfo
+
 def sendContent(update, context):
 	chat_id = update.message.chat_id
 
@@ -282,6 +699,7 @@ def sendContent(update, context):
 					functions.msgHost(f"Server is sending User, {name}: `{ytLinkId}`", True)
 				
 				sendActualContent(update, context, vidId)
+				return
 
 		else:
 			message = context.bot.send_message(chat_id=chat_id, text="Video not found. ❌")
@@ -303,14 +721,15 @@ def sendActualContent(update, context, vidId):
 
 	# Getting facts
 	rootDownloadDir = secret.configuration['general']['backupDir']
-	for (title, id, childfrom, videopath, extention, subtitles, uploaddate, downloaddate, deleteddate, deleted, deletedtype, writtenrequestuser) in functions.getData('content', f'WHERE id=\"{vidId}\"'):
-		accountPath = f'{rootDownloadDir}/{childfrom}'
-		pathDictionary = {
-			'audio': f'{rootDownloadDir}/{childfrom}/{videopath}.mp3',
-			'video': f'{rootDownloadDir}/{childfrom}/{videopath}.{extention}',
-			'thumbnail': f'{rootDownloadDir}/{childfrom}/thumbnail/{videopath}.jpg',
-			'description': f'{rootDownloadDir}/{childfrom}/description/{videopath}.txt'
-		}
+	for (title, vidId, childfrom, videopath, extention, subtitles, uploaddate, downloaddate, deleteddate, deleted, deletedtype, writtenrequestuser) in functions.getData('content', f'WHERE id=\"{vidId}\"'):
+		for (channelTitle, channelId, priority, pullError) in functions.getData('account', f'WHERE id=\"{childfrom}\"'):
+			accountPath = f'{rootDownloadDir}/{channelTitle}'
+			pathDictionary = {
+				'audio': f'{rootDownloadDir}/{channelTitle}/{videopath}.mp3',
+				'video': f'{rootDownloadDir}/{channelTitle}/{videopath}.{extention}',
+				'thumbnail': f'{rootDownloadDir}/{channelTitle}/thumbnail/{videopath}.jpg',
+				'description': f'{rootDownloadDir}/{channelTitle}/description/{videopath}.txt'
+			}
 
 	humanReadableSize = functions.humanReadableSize(pathDictionary['video'])
 
@@ -321,16 +740,19 @@ def sendActualContent(update, context, vidId):
 	with open(pathDictionary['description'], 'r') as file:
 		description = file.read()
 
-	link = functions.uploadFile(title, description, pathDictionary['video'])
-
 	# Video
+	#context.bot.send_chat_action(chat_id=update.message.chat_id, action=ChatAction.UPLOAD_VIDEO, timeout=100)
+	link = functions.uploadFile(title, description, pathDictionary['video'])
+	#context.bot.send_chat_action(chat_id=update.message.chat_id, action=ChatAction.UPLOAD_VIDEO, timeout=0.5)
+	
 	context.bot.send_message(chat_id=chat_id, text=link)
 	context.bot.delete_message(chat_id=chat_id, message_id=animationMessage.message_id)
+	context.bot.delete_message(chat_id=chat_id, message_id=statusMessage.message_id)
 
 	# Audio
-	context.bot.edit_message_text(chat_id=chat_id, message_id=statusMessage.message_id, text="Generating Audio from Video 2/4")
+	statusMessage = context.bot.send_message(chat_id=chat_id, text="Generating Audio from Video 2/4")
 	animationMessage = context.bot.send_message(chat_id=chat_id, text="⏳")
-	functions.subprocess.call(['ffmpeg', '-y', '-i', pathDictionary['video'], '-vn', '-acodec', 'libmp3lame', '-qscale:a', '2', '-metadata', f'artist={childfrom}', '-metadata', f'title={title}','-loglevel', 'quiet', pathDictionary['audio']])
+	functions.subprocess.call(['ffmpeg', '-y', '-i', pathDictionary['video'], '-vn', '-acodec', 'libmp3lame', '-qscale:a', '2', '-metadata', f'artist={channelTitle}', '-metadata', f'title={title}','-loglevel', 'quiet', pathDictionary['audio']])
 	context.bot.send_audio(chat_id=chat_id, audio=open(pathDictionary['audio'], 'rb'), caption='')
 	context.bot.delete_message(chat_id=chat_id, message_id=animationMessage.message_id)
 	functions.os.remove(pathDictionary['audio'])
@@ -349,21 +771,130 @@ def sendActualContent(update, context, vidId):
 
 def get_info(update, context):
 	"""Listen for user input and do an if statement."""
+	chat_id = update.message.chat_id
 
 	# Check if the user is allowed to use the bot
 	if is_allowed_user(update, context) is False:
-		context.bot.send_message(chat_id=update.message.chat_id, text="Sorry, you are not authorized to use this bot.")
+		context.bot.send_message(chat_id=chat_id, text="Sorry, you are not authorized to use this bot.")
 		return
 
-	update.message.reply_text('Please enter a link:')
-	link = update.message.text
+	userProvidedId = update.message.text[6:]
 
-	# Perform the if statement based on the link
-	if 'example.com' in link:
-		update.message.reply_text('This is an example link.')
+	if not userProvidedId:
+		context.bot.send_message(chat_id=chat_id, text="ID not found")
+		# Add handler for text input
+		return
+
+	tables = [ 'content', 'account', 'chatid' ]
+
+	foundEntry = False
+	for table in tables:
+		for x in functions.getData(table, f'WHERE id=\"{userProvidedId}\"'):
+			foundEntry = True
+			infoTable = table
+
+	if foundEntry is False:
+		context.bot.send_message(chat_id=chat_id, text="ID not found")
+		return
+
+	infoContent = ''
+	keyboard = [[],[]]
+
+	if infoTable == 'content':
+
+		rootDownloadDir = secret.configuration['general']['backupDir']
+
+		for (title, vidId, childfrom, videopath, extention, subtitles, uploaddate, downloaddate, deleteddate, deleted, deletedtype, requestuser) in functions.getData('content', f'WHERE id=\"{userProvidedId}\"'):
+			infoContent += f'Title:  *{functions.escapeMarkdownAll(title)}*\n'
+			
+			# Channel info
+			for (channelTitle, channelId, priority, pullError) in functions.getData('account', f'WHERE id=\"{childfrom}\"'):
+				infoContent += f'From: *{channelTitle}* \\(`{channelId}`\\)\n\n'
+				accountPath = f'{rootDownloadDir}/{channelTitle}'
+				pathDictionary = {
+					'video': f'{rootDownloadDir}/{channelTitle}/{videopath}.{extention}',
+					'thumbnail': f'{rootDownloadDir}/{channelTitle}/thumbnail/{videopath}.jpg'
+				}
+
+			infoContent += f"Availability: *{deletedtype}*\n"
+
+			infoContent += f"Size: *{functions.escapeMarkdownAll(functions.humanReadableSize(pathDictionary['video']))}*\n\n"
+
+			uploadDateDay, uploadDateMonth, uploadDateYear, uploadDateHour, uploadDateMinute = functions.getDate(str(uploaddate))
+			uploadDaysAgo = functions.days_since(f"{uploadDateYear}-{uploadDateMonth}-{uploadDateDay}")
+			if uploadDaysAgo == 0:
+				pass
+			else:
+				uploadTimePerspective = f'{uploadDaysAgo} Days ago'
+			infoContent += f"Uploaded:      _{uploadDateDay}\\-{uploadDateMonth}\\-{uploadDateYear}_ *{uploadTimePerspective}*\n"
+
+			downloadDateDay, downloadDateMonth, downloadDateYear, downloadDateHour, downloadDateMinute = functions.getDate(str(downloaddate))
+			downloadDaysAgo = functions.days_since(f"{downloadDateYear}-{downloadDateMonth}-{downloadDateDay}")
+			if downloadDaysAgo == 0:
+				pass
+			else:
+				downloadTimePerspective = f'{downloadDaysAgo} Days ago'
+			infoContent += f"Downloaded: _{downloadDateDay}\\-{downloadDateMonth}\\-{downloadDateYear}_ *{downloadTimePerspective}*\n"
+
+
+
+			keyboard[0].append(InlineKeyboardButton(text='Open Video', url=f'https://www.youtube.com/watch?v={vidId}'))
+			keyboard[1].append(InlineKeyboardButton(text='Remove', callback_data='delete')) #f"{{ 'header': 'delete', 'from': 'info', 'message_id': '{uploadDateYear}' }}"))
+			keyboard[1].append(InlineKeyboardButton(text='Send', callback_data='send'))
+			keyboard[1].append(InlineKeyboardButton(text='Channel', callback_data='parentinfo'))
+
+
+	elif infoTable == 'account':
+
+		for (channelTitle, channelId, priority, pullError) in functions.getData('account', f'WHERE id=\"{userProvidedId}\"'):
+			
+			infoContent += f"Title: *{functions.escapeMarkdownAll(channelTitle)}*\n\n"
+
+			if pullError == 'N/A':
+				infoContent += "No content errors detected\n\n"
+			else:
+				infoContent += f"ERROR: {functions.escapeMarkdownAll(pullError)}\n\n"
+
+			if priority == 1:
+				infoContent += f"Priority: _VeryFast_\n"
+				infoContent += f"Gets checked every *5* minutes for new content\n\n"
+			elif priority == 2:
+				infoContent += f"Priority: _Fast_\n"
+				infoContent += f"Gets checked every *10* minutes for new content\n\n"
+			elif priority == 3:
+				infoContent += f"Priority: _Medium_\n"
+				infoContent += f"Gets checked every *15* minutes for new content\n\n"
+			elif priority == 4:
+				infoContent += f"Priority: *NONE*\n"
+				infoContent += f"This Channel is not backed up, it has only been used to download sigle videos\\.\n\n"
+
+			#infoContent += f"Channel ID: *{functions.escapeMarkdownAll(id)}*\n"
+			#infoContent += f"https:\\/\\/youtube\\.com\\/channel\\/{functions.escapeMarkdownAll(channelId)}\n\n"
+
+			keyboard[0].append(InlineKeyboardButton(text='Open Channel', url=f'https://youtube.com/channel/{channelId}'))
+			keyboard[1].append(InlineKeyboardButton(text='Remove Channel', callback_data='delete'))
+			keyboard[1].append(InlineKeyboardButton(text='List Channel', callback_data='list'))
+
+
+			#keyboard = [[InlineKeyboardButton(text='Open Channel', url=f'https://youtube.com/channel/{channelId}')]]
+			#keyboard = [[InlineKeyboardButton("🗑️", callback_data='delete')]]
+
+
+	elif infoTable == 'chatid':
+
+		for (name, chatId, priority, authenticated) in functions.getData('chatid', f'WHERE id=\"{chat_id}\"'):
+			if priority != '1':
+				context.bot.send_message(chat_id=chat_id, text="Sorry, you are not authorized to use this table.")
+				return
+
+		for (name, chatId, priority, authenticated) in functions.getData('chatid', f'WHERE id=\"{userProvidedId}\"'):
+			print(name)
+
+	if bool(keyboard[0]) or bool(keyboard[1]):
+		reply_markup = InlineKeyboardMarkup(keyboard)
+		infoResultMessage = context.bot.send_message(chat_id=chat_id, text=infoContent, parse_mode='MarkdownV2', reply_markup=reply_markup) #disable_web_page_preview=False)
 	else:
-		update.message.reply_text('Sorry, I do not recognize this link.')
-
+		infoResultMessage = context.bot.send_message(chat_id=chat_id, text=infoContent, parse_mode='MarkdownV2') #disable_web_page_preview=False)
 
 def link(update, context):
 	"""Handle links sent by the user."""
@@ -389,7 +920,7 @@ def link(update, context):
 
 			userExists = False
 			hasPriorityValue = False
-			for (name, id, priority, authenticated) in functions.getData('chatid', f'WHERE id=\"{chat_id}\"'):
+			for (name, chatId, priority, authenticated) in functions.getData('chatid', f'WHERE id=\"{chat_id}\"'):
 				userExists = True
 				if priority == 'N/A':
 					hasPriorityValue = True
@@ -434,8 +965,7 @@ def link(update, context):
 		channelChatInfo['channel_name'] = functions.accNameFriendly(message_text)
 
 		context.bot.delete_message(chat_id=chat_id, message_id=update.message.message_id)
-		print(channelChatInfo)
-		for (name, id, priority, authenticated) in functions.getData('chatid', f'WHERE id={chat_id}'):
+		for (name, chatId, priority, authenticated) in functions.getData('chatid', f'WHERE id={chat_id}'):
 			if priority == '1':
 				functions.addAccountData(channelChatInfo['channel_name'], channelChatInfo['channel_id'], channelChatInfo['priority'])
 				context.bot.edit_message_text(chat_id=channelChatInfo['chat_id'], message_id=channelChatInfo['message_id'], text=f"Added: {channelChatInfo['channel_name']} ✅")
@@ -446,6 +976,75 @@ def link(update, context):
 			
 			context.user_data["next_handler"] = ""
 			return
+	elif context.user_data.get("next_handler") == 'listTextHandler':
+		listDataInfo = context.user_data.get("listDataInfo")
+		listArgs = listDataInfo['listArgs']
+		filters = listDataInfo['filters']
+
+#		prevResponceDict = eval(query.data)
+#		prevResponceValue = prevResponceDict['value']
+#		nextArg = prevResponceDict['nextArg']
+
+		for key in listArgs:
+			if listArgs[key] == 'waitingForInput':
+				listArgs[key] = message_text
+				keyName = key.capitalize()
+				break
+
+		if 'from' in listArgs and not 'fromName' in listArgs:
+			channelFound = False
+			for (channelTitle, channelId, priority, pullError) in functions.getData('account', f"WHERE title LIKE '%{listArgs['from']}%' COLLATE utf8mb4_general_ci"):
+				listArgs['from'] = channelId
+				listArgs['fromName'] = channelTitle
+				key = 'fromName' # so it showes correctly in filters += f'\n(includes) {keyName}: {listArgs[key]}'
+				channelFound = True
+				break
+				
+			if channelFound is False:
+				listArgs['from'] = '/'
+				listArgs['fromName'] = 'Channel Not Found..'
+				key = 'fromName' # so it showes correctly in filters += f'\n(includes) {keyName}: {listArgs[key]}'
+
+		elif 'requester' in listArgs and not 'requesterName' in listArgs:
+			accountFound = False
+			for (accountName, accountId, accountPriority, accountAuthenticated) in functions.getData('chatid', f"WHERE name LIKE '%{listArgs['requester']}%' COLLATE utf8mb4_general_ci"):
+				listArgs['requester'] = accountId
+				listArgs['requesterName'] = accountName
+				key = 'requesterName' # so it showes correctly in filters += f'\n(includes) {keyName}: {listArgs[key]}'
+				accountFound = True
+				break
+			
+			if accountFound is False:
+				listArgs['requester'] = '/'
+				listArgs['requesterName'] = 'Account Not Found..'
+				key = 'requesterName' # so it showes correctly in filters += f'\n(includes) {keyName}: {listArgs[key]}'	
+
+		rowsFound = listCount(listDataInfo['table'], listArgs)
+
+		keyboard = listDataInfo['keyboard']
+
+		if rowsFound != 0:
+			keyboard[2].append(InlineKeyboardButton("🔍 Search", callback_data="{'nextArg': 'search', 'value': True}"))
+		keyboard[2].append(InlineKeyboardButton("Cancel", callback_data="{'nextArg': 'cancel', 'value': True}"))
+
+		reply_markup = InlineKeyboardMarkup(keyboard)
+
+		if keyName == 'From' or keyName == '':
+			filters += f'\n(is) {keyName}: {listArgs[key]}'
+		else:
+			filters += f'\n(includes) {keyName}: {listArgs[key]}'
+
+		filtersMarkdownFree = functions.escapeMarkdownAll(filters)
+		
+		context.bot.delete_message(chat_id=chat_id, message_id=userMessageId)
+		context.bot.edit_message_text(chat_id=listDataInfo['chat_id'], message_id=listDataInfo['message_id'], text=f"Find all in *{listDataInfo['tableAlias']}* where:\t\\({rowsFound}\\)\n{filtersMarkdownFree}", parse_mode='MarkdownV2', reply_markup=reply_markup)
+
+		listDataInfo['listArgs'] = listArgs
+		context.user_data['listDataInfo'] = listDataInfo
+		context.user_data["next_handler"] = "listButtonHandler"
+
+		return
+
 	# Handle other messages as usual
 	else:
 		
@@ -496,6 +1095,7 @@ def link(update, context):
 						channelTitle = x[0]
 					if foundChannel is False:
 						channelTitle = functions.accNameFriendly(info['uploader'])
+						functions.addAccountData(channelTitle, channelId, '4')
 
 					filename = functions.filenameFriendly(videoTitle)
 
@@ -528,7 +1128,7 @@ def link(update, context):
 
 				downloaddate = datetime.now().strftime('%Y%m%d%H%M%S')
 
-				functions.addContentData(videoTitle, ytLinkId, channelTitle, filename, videoExtention, 0, uploadDate, downloaddate, 0, 0, 'Public', chat_id)
+				functions.addContentData(videoTitle, ytLinkId, channelId, filename, videoExtention, 0, uploadDate, downloaddate, 0, 0, 'Public', chat_id)
 				
 				context.bot.delete_message(chat_id=chat_id, message_id=message.message_id)
 				context.bot.send_message(chat_id=chat_id, text=f"Downloaded: \'{ytLinkId}\' ✅")
@@ -536,7 +1136,7 @@ def link(update, context):
 				if functions.subCheck(channelTitle, filename, videoExtention):
 					functions.chData('content', ytLinkId, 'subtitles', 1)
 
-				for (name, id, priority, authenticated) in functions.getData('chatid', f'WHERE id={chat_id}'):
+				for (name, chatId, priority, authenticated) in functions.getData('chatid', f'WHERE id={chat_id}'):
 					if priority != '1':
 						functions.msgHost(f"{name}, Just downloaded: https://youtube.com/watch?v={ytLinkId}", False)
 						functions.msgHost(f"/remove `{ytLinkId}`", True)
@@ -554,11 +1154,11 @@ def link(update, context):
 							context.bot.edit_message_text(chat_id=chat_id, message_id=message.message_id, text=f"ERROR 404, Cant find channel: \'{ytLinkIdClean}\' ❌")
 							return
 
-					for (name, id, priority, pullError) in functions.getData('account', f'WHERE id=\"{convertedChannelId}\"'):
+					for (channelTitle, channelId, priority, pullError) in functions.getData('account', f'WHERE id=\"{convertedChannelId}\"'):
 						if message:
-							context.bot.edit_message_text(chat_id=chat_id, message_id=message.message_id, text=f"Already backing up channel: \'{name}\' ✅")
+							context.bot.edit_message_text(chat_id=chat_id, message_id=message.message_id, text=f"Already backing up channel: \'{channelTitle}\' ✅")
 						else:
-							context.bot.send_message(chat_id=chat_id, text=f"Already backing up channel: \'{name}\' ✅")
+							context.bot.send_message(chat_id=chat_id, text=f"Already backing up channel: \'{channelTitle}\' ✅")
 						return
 
 					keyboard = [[InlineKeyboardButton("1 (fast)", callback_data='1'),InlineKeyboardButton("2 (avg)", callback_data='2'),InlineKeyboardButton("3 (slow)", callback_data='3'),InlineKeyboardButton("Cancel", callback_data='cancel')]]
@@ -613,7 +1213,7 @@ def delete(update, context):
 			entryExists = True
 
 		if entryExists:
-			for (name, id, priority, authenticated) in functions.getData('chatid', f'WHERE id=\"{chat_id}\"'):
+			for (name, chatId, priority, authenticated) in functions.getData('chatid', f'WHERE id=\"{chat_id}\"'):
 				if priority == '1':
 					message = context.bot.send_message(chat_id=chat_id, text="Deleting video ⏳")
 					functions.delVid(ytLinkId)
@@ -621,7 +1221,7 @@ def delete(update, context):
 					context.bot.edit_message_text(chat_id=chat_id, message_id=message.message_id, text="Video deleted from backup. ✅")
 				else:
 					context.bot.send_message(chat_id=chat_id, text="Sent removal request to host ⏳")
-					functions.msgHost(f"User, {name} just requested to remove https://youtu.be/{ytLinkId}")
+					functions.msgHost(f"User, {name} just requested to remove https://youtu.be/{ytLinkId}", False)
 		else:
 			message = context.bot.send_message(chat_id=chat_id, text="Video was not downloaded. ✅")
 			responseMessageId = message.message_id
@@ -655,6 +1255,7 @@ def main():
 	dp.add_handler(CommandHandler("latest", ask_latest))
 	dp.add_handler(CommandHandler("delete", delete))
 	dp.add_handler(CommandHandler("send", sendContent))
+	dp.add_handler(CommandHandler("list", listData))
 	dp.add_handler(CallbackQueryHandler(buttonResolver))
 	dp.add_handler(CommandHandler("info", get_info))
 	dp.add_handler(MessageHandler(Filters.text & (~Filters.command), link))

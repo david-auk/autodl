@@ -16,49 +16,57 @@ sleepTime = args.sleeptime
 
 originalTerminalWidth = shutil.get_terminal_size().columns
 
-# Getting date
-formattedDate = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
-
 totalRows = functions.countData("content", 'ALL')
 
-def checkingAndInforming(title, id, childfrom, videopath, extention, subtitles, uploaddate, downloaddate, deleteddate, deleted, deletedtype, requestuser):
-	isAvalible, avalibilityType, striker = functions.availabilityCheck(id)
+def checkingAndInforming(title, vidId, childfrom, videopath, extention, subtitles, uploaddate, downloaddate, deleteddate, deleted, deletedtype, requestuser):
+	isAvalible, avalibilityType, striker = functions.availabilityCheck(vidId)
 	if isAvalible is False:
-		if avalibilityType == 'Deleted' or avalibilityType == 'Private':
-			print(f"{functions.coloursB['red']}{avalibilityType.upper()}{functions.colours['reset']} - {id} | {childfrom} | {title}")
-		else:
-			if avalibilityType == 'Unlisted' or avalibilityType == 'Striked':
-				print(f"{functions.coloursB['yellow']}{avalibilityType.upper()}{functions.colours['reset']} - {id} | {childfrom} | {title}")	
+		for (channelTitle, channelId, priority, pullError) in functions.getData('account', f'WHERE id=\"{childfrom}\"'):
 
-		if deleted == 0: # Video status just got deleted
-			print(f'  ^ The first time detecting this as {avalibilityType}\n')
-			functions.chData('content', id, 'deleted', 1)
-			functions.chData('content', id, 'deletedtype', avalibilityType)
-			functions.chData('content', id, 'deleteddate', formattedDate)
-			if avalibilityType == 'Private':
-				functions.msgAll(f"{title} from \'{childfrom}\' just got Privated, not Deleted\n\n/send `{id}`", True)
+			if avalibilityType == 'Deleted' or avalibilityType == 'Private':
+				print(f"{functions.coloursB['red']}{avalibilityType.upper()}{functions.colours['reset']} - {vidId} | {channelTitle} | {title}")
 			else:
-				if avalibilityType == 'Deleted':
-					functions.msgAll(f"{title} from \'{childfrom}\' just got Deleted, not Privated\n\n/send `{id}`", True)
+				if avalibilityType == 'Unlisted' or avalibilityType == 'Striked':
+					print(f"{functions.coloursB['yellow']}{avalibilityType.upper()}{functions.colours['reset']} - {vidId} | {channelTitle} | {title}")	
+
+			if deleted == 0: # Video status just got deleted
+
+				# Getting date
+				formattedDate = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
+
+				print(f'  ^ The first time detecting this as {avalibilityType}\n')
+				functions.chData('content', vidId, 'deleted', 1)
+				functions.chData('content', vidId, 'deletedtype', avalibilityType)
+				functions.chData('content', vidId, 'deleteddate', formattedDate)
+				if avalibilityType == 'Private':
+					functions.msgAll(f"{title} from \'{channelTitle}\' just got Privated, not Deleted\n\n/send `{vidId}`", True)
 				else:
-					if avalibilityType == 'Unlisted':
-						functions.msgAll(f"{title} from \'{childfrom}\' just got Unlisted\n\nhttps://www.youtube.com/watch?v={id}")
+					if avalibilityType == 'Deleted':
+						functions.msgAll(f"{title} from \'{channelTitle}\' just got Deleted, not Privated\n\n/send `{vidId}`", True)
 					else:
-						if avalibilityType == 'Striked':
-							functions.msgAll(f"{title} from \'{childfrom}\' just got Striked by \'{striker}\'\n\n/send `{id}`", True)
+						if avalibilityType == 'Unlisted':
+							functions.msgAll(f"{title} from \'{channelTitle}\' just got Unlisted\n\nhttps://www.youtube.com/watch?v={vidId}")
+						else:
+							if avalibilityType == 'Striked':
+								functions.msgAll(f"{title} from \'{channelTitle}\' just got Striked by \'{striker}\'\n\n/send `{vidId}`", True)
 	# If the content is avalible
 	else:
 		if deleted == 1: # Video status just got back online
-			print(f"{functions.coloursB['green']}{avalibilityType.upper()}{functions.colours['reset']} - {id} | {childfrom} | {title}")
-			print(f'  ^ The first time detecting this as {avalibilityType} (Again)\n')
-			functions.chData('content', id, 'deleted', 0)
-			functions.chData('content', id, 'deletedtype', 'Public')
-			functions.chData('content', id, 'deleteddate', formattedDate)
-			functions.msgAll(f"{title}. from \'{childfrom}\' just got put back Online from {deletedtype}\nhttps://www.youtube.com/watch?v={id}")
+			for (channelTitle, channelId, priority, pullError) in functions.getData('account', f'WHERE id=\"{childfrom}\"'):
+
+				# Getting date
+				formattedDate = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
+
+				print(f"{functions.coloursB['green']}{avalibilityType.upper()}{functions.colours['reset']}  - {vidId} | {channelTitle} | {title}")
+				print(f'  ^ The first time detecting this as {avalibilityType} (Again)\n')
+				functions.chData('content', vidId, 'deleted', 0)
+				functions.chData('content', vidId, 'deletedtype', 'Public')
+				functions.chData('content', vidId, 'deleteddate', formattedDate)
+				functions.msgAll(f"{title}. from \'{channelTitle}\' just got put back Online from {deletedtype}\nhttps://www.youtube.com/watch?v={vidId}", False)
 
 threads = []
 currentRequestNum = 0
-for (title, id, childfrom, videopath, extention, subtitles, uploaddate, downloaddate, deleteddate, deleted, deletedtype, requestuser) in functions.getData('content', 'ORDER BY deleted DESC'):
+for (title, vidId, childfrom, videopath, extention, subtitles, uploaddate, downloaddate, deleteddate, deleted, deletedtype, requestuser) in functions.getData('content', 'ORDER BY deleted DESC'):
 
 	currentRequestNum += 1
 
@@ -68,12 +76,12 @@ for (title, id, childfrom, videopath, extention, subtitles, uploaddate, download
 	print(f"{functions.coloursB['white']}{100/totalRows*currentRequestNum:.2f}%{functions.colours['reset']}\033[{terminalWidth}C{currentRequestNum}/{totalRows}", end = '\r')
 
 	if runInBackround is True:
-		t = threading.Thread(target=checkingAndInforming, args=(title, id, childfrom, videopath, extention, subtitles, uploaddate, downloaddate, deleteddate, deleted, deletedtype, requestuser))
+		t = threading.Thread(target=checkingAndInforming, args=(title, vidId, childfrom, videopath, extention, subtitles, uploaddate, downloaddate, deleteddate, deleted, deletedtype, requestuser))
 		threads.append(t)
 		t.start()
 		time.sleep(sleepTime)
 	elif runInBackround is False:
-		checkingAndInforming(title, id, childfrom, videopath, extention, subtitles, uploaddate, downloaddate, deleteddate, deleted, deletedtype, requestuser)
+		checkingAndInforming(title, vidId, childfrom, videopath, extention, subtitles, uploaddate, downloaddate, deleteddate, deleted, deletedtype, requestuser)
 	else:
 		print("Please enter a 'runInBackround' value")
 		break

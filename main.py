@@ -33,17 +33,17 @@ if args.time:
 	requiredPriority += 1 # Making the code above more human readable
 	statement = f"WHERE priority < {requiredPriority} ORDER BY title ASC;"
 else:
-	statement = 'ORDER BY title ASC;'
+	statement = 'WHERE priority < 4 ORDER BY title ASC;'
 
 ## Flags end.
 
-for (channelTitle, id, priority, pullError) in functions.getData("account", statement):
+for (channelTitle, channelId, priority, pullError) in functions.getData("account", statement):
 
 	# Creating the prompt with corosponding colour
 	print(f"{functions.colourPriority(priority)}•{functions.colours['reset']} {functions.coloursB['white']}{channelTitle}:{functions.colours['reset']}")
 
 	# Getting all the videos of current youtube channel in 'account' table
-	videos = scrapetube.get_channel(id)
+	videos = scrapetube.get_channel(channelId)
 
 	forLoopRan = False
 	for video in videos:
@@ -68,7 +68,7 @@ for (channelTitle, id, priority, pullError) in functions.getData("account", stat
 
 			# Checking if video has been downloaded directly by user
 			userRequested = False
-			for (title, id, childfrom, videopath, extention, subtitles, uploaddate, downloaddate, deleteddate, deleted, deletedtype, writtenrequestuser) in functions.getData('content', f'WHERE id=\"{vidId}\"'):
+			for (title, alternateVidId, childfrom, videopath, extention, subtitles, uploaddate, downloaddate, deleteddate, deleted, deletedtype, writtenrequestuser) in functions.getData('content', f'WHERE id=\"{vidId}\"'):
 				print(f"[{functions.coloursB['cyan']}√{functions.colours['reset']}] https://www.youtube.com/watch?v={vidId}\n")
 				userRequested = True
 
@@ -137,8 +137,8 @@ for (channelTitle, id, priority, pullError) in functions.getData("account", stat
 						# Getting the current date in desired format
 						downloaddate = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
 
-						# Adding new entry to 'content' table
-						totalRecordsAdded += functions.addContentData(videoTitle, vidId, channelTitle, filename, videoExtention, 0, int(uploadDate), int(downloaddate), 0, 0, 'Public', requestuser)
+						# Adding new entry to 'content' table							#channelTitle
+						totalRecordsAdded += functions.addContentData(videoTitle, vidId, channelId, filename, videoExtention, 0, int(uploadDate), int(downloaddate), 0, 0, 'Public', requestuser)
 			
 				else:
 

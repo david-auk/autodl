@@ -5,12 +5,15 @@ import requests
 import secret
 import datetime
 import subprocess
+import base64
 import shutil
 import time
+import json
 import os
 import re
 
 from telegram import Bot, ParseMode
+#from moviepy.video.io.VideoFileClip import VideoFileClip
 from yt_dlp import YoutubeDL, utils
 from mysql.connector import conversion
 
@@ -139,9 +142,11 @@ def countData(table, inputstatement):
 	countDataCursor = mydb.cursor(buffered=True)
 	column = 'id'
 	if inputstatement == 'ALL':
-		statement = f'SELECT COUNT(ALL {column}) FROM {table}'
+		#statement = f'SELECT COUNT(ALL {column}) FROM {table}'
+		statement = f'SELECT COUNT(*) FROM {table}'
 	else:
-		statement = f'SELECT COUNT(ALL {column}) FROM {table} {inputstatement}'
+		#statement = f'SELECT COUNT(ALL {column}) FROM {table} {inputstatement}'
+		statement = f'SELECT COUNT(*) FROM {table} {inputstatement}'
 
 	countDataCursor.execute(statement)
 	for x in countDataCursor:
@@ -176,12 +181,13 @@ def delVid(vidId):
 	# Getting facts
 	rootDownloadDir = secret.configuration['general']['backupDir']
 	for (title, id, childfrom, videopath, extention, subtitles, uploaddate, downloaddate, deleteddate, deleted, deletedtype, writtenrequestuser) in getData('content', f'WHERE id=\"{vidId}\"'):
-		accountPath = f'{rootDownloadDir}/{childfrom}'
-		pathDictionary = {
-			'video': f'{rootDownloadDir}/{childfrom}/{videopath}.{extention}',
-			'thumbnail': f'{rootDownloadDir}/{childfrom}/thumbnail/{videopath}.jpg',
-			'description': f'{rootDownloadDir}/{childfrom}/description/{videopath}.txt'
-		}
+		for (channelTitle, channelId, priority, pullError) in functions.getData('account', f'WHERE id=\"{childfrom}\"'):
+			accountPath = f'{rootDownloadDir}/{channelTitle}'
+			pathDictionary = {
+				'video': f'{rootDownloadDir}/{channelTitle}/{videopath}.{extention}',
+				'thumbnail': f'{rootDownloadDir}/{channelTitle}/thumbnail/{videopath}.jpg',
+				'description': f'{rootDownloadDir}/{channelTitle}/description/{videopath}.txt'
+			}
 
 	# Removing files
 	for value in pathDictionary:
@@ -195,7 +201,7 @@ def delVid(vidId):
 
 	# Deleting directory (if empty)
 	if not dirContent:
-		shutil.rmtree(f'{rootDownloadDir}/{childfrom}')
+		shutil.rmtree(f'{rootDownloadDir}/{channelTitle}')
 
 	# Deleting entry from DB
 	delData('content', vidId)
@@ -220,6 +226,11 @@ def uploadFile(title, description, path):
 
 def escapeMarkdown(text):
 	escape_list = ['*', '_', '`']
+	formatedQuote = ''.join(['\\'+c if c in escape_list else c for c in text])
+	return formatedQuote
+
+def escapeMarkdownAll(text):
+	escape_list = ['>', '-', ']', '[', '.', '}', '{', '|', ')', '(', '#', '!', '=', '+', '*', '_', '`']
 	formatedQuote = ''.join(['\\'+c if c in escape_list else c for c in text])
 	return formatedQuote
 
@@ -348,6 +359,21 @@ def writeDescription(channelTitle, filename, description):
 
 	return succes
 
+def baseEncodeJson(dictionary):
+
+	# Encode the JSON string as bytes and then as a Base64 string
+	jsonText = json.dumps(dictionary)
+	encodedDict = base64.b64encode(jsonText.encode('utf-8')).decode('utf-8')
+
+	return encodedDict
+
+def baseDecodeJson(encodedDictionary):
+	# Decode the Base64 string as bytes and then as a JSON string
+	decodedDictStr = base64.b64decode(encodedDictionary).decode('utf-8')
+	decodedDict = json.loads(decodedDictStr)
+
+	return decodedDict
+
 # Function for converting non filename friendly srt to filename friendly
 def filenameFriendly(srtValue):
 
@@ -431,6 +457,56 @@ def humanReadableSize(path):
 	human_readable_size = f"{file_size:.2f} {size_suffixes[size_suffix_index]}"
 
 	return human_readable_size
+
+#pip3 install moviepy==1.0.3
+#def get_video_duration(file_path):
+#    # Open video file
+#    video = VideoFileClip(file_path)
+#
+#    # Get duration in seconds
+#    duration = video.duration
+#
+#    # Close video file
+#    video.reader.close()
+#
+#    # Convert to minutes and seconds
+#    if duration >= 60:
+#        minutes = int(duration // 60)
+#        seconds = int(duration % 60)
+#        return f"{minutes}:{seconds:02}"
+#    else:
+#        return f"{duration:.2f}"
+
+#from PIL import Image
+#def get_resolution(file_path):
+#    # Open file
+#    with Image.open(file_path) as image:
+#        # Get resolution
+#        width, height = image.size
+#
+#    # Determine quality based on width
+#    if width >= 3840:
+#        quality = "4K"
+#    elif width >= 1920:
+#        quality = "1080p"
+#    elif width >= 1280:
+#        quality = "720p"
+#    else:
+#        quality = f"{width}x{height}"
+#
+#    # Return resolution with quality information
+#    return f"{width}x{height} ({quality})"
+
+
+def days_since(date_str):
+    # Convert date string to datetime object
+    date = datetime.datetime.strptime(date_str, '%Y-%m-%d').date()
+
+    # Calculate difference between current date and input date
+    delta = datetime.datetime.now().date() - date
+
+    # Return number of days as integer
+    return delta.days
 
 def getChannelFacts(link):
 	link = f"https://youtube.com/channel/{link}"
