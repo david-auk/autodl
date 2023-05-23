@@ -452,16 +452,18 @@ def buttonResolver(update, context):
 					filters += f'\n(includes) Title: {listArgs["title"]}'
 			else:
 				keyboard[1].append(InlineKeyboardButton("✅ Title", callback_data="{'nextArg': 'title', 'value': 'waitingForInput'}"))
-				
-			if 'requester' in listArgs:
-				keyboard[1].append(InlineKeyboardButton("❌ Requester", callback_data="{'nextArg': 'requester', 'value': False}"))
-				if listArgs['requester'] == 'waitingForInput':
-					filtersToAddLater += '\n(with) Requester:' # so when the filters is exported it wont have duplicate lines
-					buttons = False
-				else:
-					filters += f'\n(with) Requester: {listArgs["requesterName"]}'
-			else:
-				keyboard[1].append(InlineKeyboardButton("✅ Requester", callback_data="{'nextArg': 'requester', 'value': 'waitingForInput'}"))
+			
+			for (name, chatId, priority, authenticated) in functions.getData('chatid', f'WHERE id=\"{listDataInfo["chat_id"]}\"'):
+				if priority == '1':
+					if 'requester' in listArgs:
+						keyboard[1].append(InlineKeyboardButton("❌ Requester", callback_data="{'nextArg': 'requester', 'value': False}"))
+						if listArgs['requester'] == 'waitingForInput':
+							filtersToAddLater += '\n(with) Requester:' # so when the filters is exported it wont have duplicate lines
+							buttons = False
+						else:
+							filters += f'\n(with) Requester: {listArgs["requesterName"]}'
+					else:
+						keyboard[1].append(InlineKeyboardButton("✅ Requester", callback_data="{'nextArg': 'requester', 'value': 'waitingForInput'}"))
 				
 
 		elif listDataInfo['table'] == 'account':
