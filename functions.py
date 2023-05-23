@@ -5,8 +5,10 @@ import requests
 import secret
 import datetime
 import subprocess
+import base64
 import shutil
 import time
+import json
 import os
 import re
 
@@ -356,6 +358,21 @@ def writeDescription(channelTitle, filename, description):
 		succes = True
 
 	return succes
+
+def baseEncodeJson(dictionary):
+
+	# Encode the JSON string as bytes and then as a Base64 string
+	jsonText = json.dumps(dictionary)
+	encodedDict = base64.b64encode(jsonText.encode('utf-8')).decode('utf-8')
+
+	return encodedDict
+
+def baseDecodeJson(encodedDictionary):
+	# Decode the Base64 string as bytes and then as a JSON string
+	decodedDictStr = base64.b64decode(encodedDictionary).decode('utf-8')
+	decodedDict = json.loads(decodedDictStr)
+
+	return decodedDict
 
 # Function for converting non filename friendly srt to filename friendly
 def filenameFriendly(srtValue):

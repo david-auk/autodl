@@ -183,7 +183,8 @@ def listCount(table, info):
 			return
 
 	column_mapping = {'from': 'childfrom', 'requester': 'requestuser'}
-	exclude_columns = [ 'fromName' ]
+	exclude_columns = [ 'fromName', 'requesterName' ]
+	completed_columns = [ 'childfrom', 'requestuser' ]
 
 	conditions = []
 	if info:
@@ -194,6 +195,8 @@ def listCount(table, info):
 				key = column_mapping[key]
 			if isinstance(value, bool):
 				value = int(value)
+				conditions.append(f"{key}='{value}'")
+			elif key in completed_columns:
 				conditions.append(f"{key}='{value}'")
 			else:
 				#words = value.split()
@@ -213,6 +216,7 @@ def buttonResolver(update, context):
 	query = update.callback_query
 	query.answer()
 	buttonHandler = context.user_data["next_handler"]
+
 	#context.user_data["next_handler"] = ''
 
 	if buttonHandler == 'latest':
@@ -404,6 +408,7 @@ def buttonResolver(update, context):
 			if nextArg == 'requester':
 				if prevResponceValue is False:
 					del listArgs['requester']
+					del listArgs['requesterName']
 				else:
 					listArgs['requester'] = prevResponceValue
 
@@ -454,7 +459,7 @@ def buttonResolver(update, context):
 					filtersToAddLater += '\n(with) Requester:' # so when the filters is exported it wont have duplicate lines
 					buttons = False
 				else:
-					filters += f'\n(with) Requester: {listArgs["requester"]}'
+					filters += f'\n(with) Requester: {listArgs["requesterName"]}'
 			else:
 				keyboard[1].append(InlineKeyboardButton("✅ Requester", callback_data="{'nextArg': 'requester', 'value': 'waitingForInput'}"))
 				
@@ -538,7 +543,8 @@ def searchList(update, context, info, page_number):
 	pageInfo['message_id'] = info['message_id']
 
 	column_mapping = {'from': 'childfrom', 'requester': 'requestuser'}
-	exclude_columns = [ 'fromName' ]
+	exclude_columns = [ 'fromName', 'requesterName' ]
+	completed_columns = [ 'childfrom', 'requestuser' ]
 	conditions = []
 	if info['listArgs']:
 		for key, value in info['listArgs'].items():
@@ -548,6 +554,8 @@ def searchList(update, context, info, page_number):
 				key = column_mapping[key]
 			if isinstance(value, bool):
 				value = int(value)
+				conditions.append(f"{key}='{value}'")
+			elif key in completed_columns:
 				conditions.append(f"{key}='{value}'")
 			else:
 				#words = value.split()
@@ -777,6 +785,7 @@ def get_info(update, context):
 
 	tables = [ 'content', 'account', 'chatid' ]
 
+	foundEntry = False
 	for table in tables:
 		for x in functions.getData(table, f'WHERE id=\"{userProvidedId}\"'):
 			foundEntry = True
@@ -825,6 +834,14 @@ def get_info(update, context):
 				downloadTimePerspective = f'{downloadDaysAgo} Days ago'
 			infoContent += f"Downloaded: _{downloadDateDay}\\-{downloadDateMonth}\\-{downloadDateYear}_ *{downloadTimePerspective}*\n"
 
+
+
+			keyboard[0].append(InlineKeyboardButton(text='Open Video', url=f'https://www.youtube.com/watch?v={vidId}'))
+			keyboard[1].append(InlineKeyboardButton(text='Remove', callback_data='delete')) #f"{{ 'header': 'delete', 'from': 'info', 'message_id': '{uploadDateYear}' }}"))
+			keyboard[1].append(InlineKeyboardButton(text='Send', callback_data='send'))
+			keyboard[1].append(InlineKeyboardButton(text='Channel', callback_data='parentinfo'))
+
+
 	elif infoTable == 'account':
 
 		for (channelTitle, channelId, priority, pullError) in functions.getData('account', f'WHERE id=\"{userProvidedId}\"'):
@@ -850,7 +867,7 @@ def get_info(update, context):
 				infoContent += f"This Channel is not backed up, it has only been used to download sigle videos\\.\n\n"
 
 			#infoContent += f"Channel ID: *{functions.escapeMarkdownAll(id)}*\n"
-			infoContent += f"https:\\/\\/youtube\\.com\\/channel\\/{functions.escapeMarkdownAll(channelId)}\n\n"
+			#infoContent += f"https:\\/\\/youtube\\.com\\/channel\\/{functions.escapeMarkdownAll(channelId)}\n\n"
 
 			keyboard[0].append(InlineKeyboardButton(text='Open Channel', url=f'https://youtube.com/channel/{channelId}'))
 			keyboard[1].append(InlineKeyboardButton(text='Remove Channel', callback_data='delete'))
@@ -946,7 +963,6 @@ def link(update, context):
 		channelChatInfo['channel_name'] = functions.accNameFriendly(message_text)
 
 		context.bot.delete_message(chat_id=chat_id, message_id=update.message.message_id)
-		print(channelChatInfo)
 		for (name, chatId, priority, authenticated) in functions.getData('chatid', f'WHERE id={chat_id}'):
 			if priority == '1':
 				functions.addAccountData(channelChatInfo['channel_name'], channelChatInfo['channel_id'], channelChatInfo['priority'])
@@ -987,6 +1003,20 @@ def link(update, context):
 				listArgs['fromName'] = 'Channel Not Found..'
 				key = 'fromName' # so it showes correctly in filters += f'\n(includes) {keyName}: {listArgs[key]}'
 
+		elif 'requester' in listArgs and not 'requesterName' in listArgs:
+			accountFound = False
+			for (accountName, accountId, accountPriority, accountAuthenticated) in functions.getData('chatid', f"WHERE name LIKE '%{listArgs['requester']}%' COLLATE utf8mb4_general_ci"):
+				listArgs['requester'] = accountId
+				listArgs['requesterName'] = accountName
+				key = 'requesterName' # so it showes correctly in filters += f'\n(includes) {keyName}: {listArgs[key]}'
+				accountFound = True
+				break
+			
+			if accountFound is False:
+				listArgs['requester'] = '/'
+				listArgs['requesterName'] = 'Account Not Found..'
+				key = 'requesterName' # so it showes correctly in filters += f'\n(includes) {keyName}: {listArgs[key]}'	
+
 		rowsFound = listCount(listDataInfo['table'], listArgs)
 
 		keyboard = listDataInfo['keyboard']
@@ -997,7 +1027,7 @@ def link(update, context):
 
 		reply_markup = InlineKeyboardMarkup(keyboard)
 
-		if keyName == 'From':
+		if keyName == 'From' or keyName == '':
 			filters += f'\n(is) {keyName}: {listArgs[key]}'
 		else:
 			filters += f'\n(includes) {keyName}: {listArgs[key]}'
